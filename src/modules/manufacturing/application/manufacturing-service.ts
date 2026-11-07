@@ -215,6 +215,24 @@ export class ManufacturingService {
     });
   }
 
+  async get(orderId: string) {
+    const order = await this.prisma.manufacturingOrder.findUnique({
+      where: { id: orderId },
+      include: {
+        item: { select: { id: true, sku: true, name: true, baseUom: { select: { code: true } } } },
+        warehouse: { select: { id: true, code: true, name: true } },
+        wipWarehouse: { select: { id: true, code: true, name: true } },
+        materials: {
+          orderBy: { sequence: "asc" },
+          include: { item: { select: { id: true, sku: true, name: true, baseUom: { select: { code: true } } } } },
+        },
+        workOrders: { select: { id: true, number: true, status: true } },
+      },
+    });
+    if (!order) throw new ManufacturingError("NOT_FOUND", "Manufacturing order not found");
+    return order;
+  }
+
   async list(input: unknown) {
     const parsed = manufacturingOrderListSchema.safeParse(input);
     if (!parsed.success) throw new ManufacturingError("INVALID_INPUT", parsed.error.message);

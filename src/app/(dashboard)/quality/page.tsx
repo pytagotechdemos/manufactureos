@@ -110,6 +110,19 @@ export default function QualityPage() {
     }
   }
 
+  async function handlePostInspection(inspection: Inspection) {
+    setError(null);
+    try {
+      const res = await fetch(`/api/v1/quality/inspections/${inspection.id}/post`, { method: "POST" });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal memposting pemeriksaan");
+      setNotice(`Pemeriksaan ${inspection.number} berhasil diposting.`);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal memposting pemeriksaan");
+    }
+  }
+
   return (
     <div className="space-y-5">
       <PageHeader
@@ -221,6 +234,7 @@ export default function QualityPage() {
                     <Th align="right">Ditolak</Th>
                     <Th align="right">Rework</Th>
                     <Th align="right">Waktu diperiksa</Th>
+                    <Th align="right">Aksi</Th>
                   </Tr>
                 </TableHead>
                 <TableBody>
@@ -234,6 +248,15 @@ export default function QualityPage() {
                       <Td align="right" className="tnum text-slate-600">{formatQuantity(ins.rejectedQty)}</Td>
                       <Td align="right" className="tnum text-slate-600">{formatQuantity(ins.reworkQty)}</Td>
                       <Td align="right" className="tnum text-slate-500">{formatDate(ins.inspectedAt)}</Td>
+                      <Td align="right">
+                        {ins.status === "DRAFT" ? (
+                          <Button variant="primary" size="sm" onClick={() => { void handlePostInspection(ins); }}>
+                            Posting
+                          </Button>
+                        ) : (
+                          <span className="text-[12px] text-slate-400">—</span>
+                        )}
+                      </Td>
                     </Tr>
                   ))}
                 </TableBody>

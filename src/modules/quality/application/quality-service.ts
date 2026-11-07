@@ -36,7 +36,7 @@ export class QualityService {
     return this.prisma.qcInspection.findMany({
       orderBy: { inspectedAt: "desc" },
       take: 100,
-      include: { manufacturingOrder: { select: { number: true, status: true, item: { select: { sku: true, name: true } } } }, productionReceipts: { select: { id: true, number: true, acceptedQty: true, status: true } } },
+      include: { manufacturingOrder: { select: { id: true, number: true, status: true, item: { select: { sku: true, name: true } } } }, productionReceipts: { select: { id: true, number: true, acceptedQty: true, status: true } } },
     });
   }
 

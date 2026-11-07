@@ -8,6 +8,10 @@ const nonnegative = z.string().trim().regex(/^\d+(\.\d+)?$/);
 const positive = z.string().trim().regex(/^\d+(\.\d+)?$/).refine((value) => new Decimal(value).greaterThan(0));
 const timeEntrySchema = z.object({ minutes: positive, idempotencyKey: z.string().trim().min(8).max(120) });
 const workCenterSchema = z.object({ workCenterId: z.string().uuid() });
+const workOrderListSchema = z.object({
+  status: z.enum(["PENDING", "IN_PROGRESS", "PAUSED", "COMPLETED", "CANCELLED"]).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+});
 export const workOutputSchema = z.object({ completedQty: positive, rejectedQty: nonnegative.default("0") });
 
 export class WorkOrderError extends Error {
@@ -38,6 +42,23 @@ async function serializable<T>(prisma: PrismaClient, operation: (transaction: Pr
 
 export class WorkOrderService {
   constructor(private readonly prisma: PrismaClient) {}
+
+  async list(input: unknown) {
+    const parsed = workOrderListSchema.safeParse(input);
+    if (!parsed.success) throw new WorkOrderError("INVALID_INPUT", parsed.error.message);
+    return this.prisma.workOrder.findMany({
+      where: parsed.data.status ? { status: parsed.data.status } : undefined,
+      take: parsed.data.limit,
+      orderBy: [{ manufacturingOrder: { createdAt: "desc" } }, { sequence: "asc" }],
+      include: {
+        manufacturingOrder: {
+          select: { id: true, number: true, status: true, item: { select: { sku: true, name: true } } },
+        },
+        workCenter: { select: { id: true, code: true, name: true } },
+        _count: { select: { timeEntries: true } },
+      },
+    });
+  }
 
   async get(workOrderId: string) {
     const workOrder = await this.prisma.workOrder.findUnique({ where: { id: workOrderId }, include: { manufacturingOrder: { select: { id: true, number: true, status: true, quantity: true } }, timeEntries: { orderBy: { createdAt: "asc" } } } });
