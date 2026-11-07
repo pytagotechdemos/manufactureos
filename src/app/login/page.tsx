@@ -34,21 +34,21 @@ export default function LoginPage() {
         </div>
 
         <div className="relative">
-          <p className="text-[11px] font-semibold tracking-widest text-brand-200 uppercase">Manufacturing ERP</p>
-          <h1 className="mt-3 max-w-md text-3xl font-semibold tracking-tight text-balance">
+          <p className="text-[11px] font-semibold tracking-widest text-brand-300 uppercase">Manufacturing ERP</p>
+          <h1 className="mt-3 max-w-md text-3xl font-semibold tracking-tight text-balance text-white">
             From demand to delivered cost, in one auditable system.
           </h1>
           <dl className="mt-8 space-y-4">
             {highlights.map(([term, description]) => (
-              <div className="border-l border-white/15 pl-4" key={term}>
+              <div className="border-l border-white/20 pl-4" key={term}>
                 <dt className="text-[13px] font-medium text-white">{term}</dt>
-                <dd className="mt-0.5 max-w-sm text-[13px] text-slate-400">{description}</dd>
+                <dd className="mt-0.5 max-w-sm text-[13px] text-slate-300">{description}</dd>
               </div>
             ))}
           </dl>
         </div>
 
-        <p className="relative text-[12px] text-slate-500">Discrete manufacturing · Asia/Jakarta</p>
+        <p className="relative text-[12px] text-slate-300/80">Discrete manufacturing · Asia/Jakarta</p>
       </section>
 
       <section className="flex flex-1 items-center justify-center px-4 py-12">
@@ -58,13 +58,13 @@ export default function LoginPage() {
               <Factory aria-hidden className="size-5 text-white" />
             </span>
             <h1 className="mt-4 text-xl font-semibold tracking-tight text-slate-900">Sign in to ManufactureOS</h1>
-            <p className="mt-1 text-[13px] text-slate-500">Access is provisioned by your system administrator.</p>
+            <p className="mt-1 text-[13px] text-slate-600">Access is provisioned by your system administrator.</p>
           </div>
 
           <div className="hidden lg:block">
-            <p className="text-[11px] font-semibold tracking-wider text-brand-700 uppercase">Welcome back</p>
+            <p className="text-[11px] font-semibold tracking-wider text-brand-600 uppercase">Welcome back</p>
             <h1 className="mt-1.5 text-xl font-semibold tracking-tight text-slate-900">Sign in to your workspace</h1>
-            <p className="mt-1 text-[13px] text-slate-500">Use the work email your administrator registered.</p>
+            <p className="mt-1 text-[13px] text-slate-600">Use the work email your administrator registered.</p>
           </div>
 
           <div className="mt-7">
