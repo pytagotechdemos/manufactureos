@@ -6,7 +6,6 @@ import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Stat, StatGrid } from "@/components/ui/stat";
 import { Table, TableBody, TableHead, Td, Th, Tr } from "@/components/ui/table";
 import { EmptyState } from "@/components/ui/empty-state";
-import { SearchInput } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
@@ -51,7 +50,6 @@ export default async function OverviewPage() {
             title="Data Master Barang"
           />
           <div className="flex items-end gap-2 p-4">
-            <SearchInput placeholder="Cari barang…" />
             <Button variant="primary" size="sm">Buat barang</Button>
           </div>
           <CardBody className="p-0">

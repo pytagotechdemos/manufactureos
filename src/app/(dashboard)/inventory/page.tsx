@@ -4,12 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Stat, StatGrid } from "@/components/ui/stat";
-import { StatusBadge } from "@/components/ui/badge";
 import { Table, TableBody, TableHead, Td, Th, Tr } from "@/components/ui/table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SearchInput } from "@/components/ui/form";
 import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
 import { formatQuantity, formatMoney } from "@/lib/format";
 
 type BalanceRow = {
@@ -96,14 +94,12 @@ export default function InventoryPage() {
 
       <Card>
         <CardHeader
-          actions={
-            <div className="flex items-end gap-2 p-4">
-              <SearchInput placeholder="Cari barang, SKU atau gudang…" />
-            </div>
-          }
           description={`${balances.length} baris stok${balances.length === 1 ? "" : "s"} di seluruh gudang.`}
           title="Saldo Stok"
         />
+        <div className="flex items-end gap-2 p-4">
+          <SearchInput value={search} onChange={setSearch} placeholder="Cari barang, SKU atau gudang…" />
+        </div>
         <CardBody className="p-0">
           {loading ? (
             <div className="p-8 text-center text-slate-500">Memuat…</div>

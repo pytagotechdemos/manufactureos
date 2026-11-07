@@ -1,7 +1,6 @@
 "use client";
 
 import { forwardRef } from "react";
-import { useState } from "react";
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 
 export function Field({
@@ -95,15 +94,18 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
   );
 });
 
-/** Search box with an inline magnifier; used in table toolbars. Manages its own value internally so it can be rendered from a Server Component without passing event handlers across the RSC boundary. */
+/** Search box with an inline magnifier; used in table toolbars. */
 export function SearchInput({
+  value,
+  onChange,
   placeholder = "Cari…",
   className = "",
 }: {
+  value: string;
+  onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
 }) {
-  const [value, setValue] = useState("");
   return (
     <div className={`relative ${className}`}>
       <svg
@@ -120,7 +122,7 @@ export function SearchInput({
       <Input
         aria-label={placeholder}
         className="pl-8"
-        onChange={(event) => setValue(event.target.value)}
+        onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         type="search"
         value={value}
