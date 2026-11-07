@@ -1,214 +1,261 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { PageHeader } from "@/components/ui/page-header";
+import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { StatusBadge } from "@/components/ui/badge";
+import { Table, TableBody, TableHead, Td, Th, Tr } from "@/components/ui/table";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Field, Input, Select } from "@/components/ui/form";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { formatDate, formatQuantity } from "@/lib/format";
 
-interface PendingOrder {
+type PendingOrder = {
   id: string;
   number: string;
   item: { sku: string; name: string };
-  status: string;
-}
+  quantity: string;
+  workOrders: { id: string; number: string; status: string; completedQty: string; rejectedQty: string }[];
+};
 
-interface QCInspection {
+type Inspection = {
   id: string;
   number: string;
-  item: { sku: string; name: string };
+  manufacturingOrder: { number: string };
   status: string;
-  createdAt: string;
-  manufacturingOrder: { sku: string } | null;
+  inspectedQty: string;
   acceptedQty: string;
   rejectedQty: string;
   reworkQty: string;
-}
+  inspectedAt: string | null;
+};
 
 export default function QualityPage() {
   const [pendingOrders, setPendingOrders] = useState<PendingOrder[]>([]);
-  const [inspections, setInspections] = useState<QCInspection[]>([]);
+  const [inspections, setInspections] = useState<Inspection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchPendingOrders();
-    fetchInspections();
-  }, []);
+  const [formNumber, setFormNumber] = useState("");
+  const [formMoId, setFormMoId] = useState("");
+  const [formWoId, setFormWoId] = useState("");
+  const [formInspected, setFormInspected] = useState("");
+  const [formAccepted, setFormAccepted] = useState("");
+  const [formRejected, setFormRejected] = useState("");
+  const [formRework, setFormRework] = useState("");
+  const [formDefect, setFormDefect] = useState("");
 
-  const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({
-    manufacturingOrderId: "",
-    quantity: "",
-    acceptedQty: "0",
-    rejectedQty: "0",
-    reworkQty: "0",
-    defectClassification: "",
-    notes: "",
-  });
-
-  async function fetchPendingOrders() {
-    try {
-      const res = await fetch("/api/v1/manufacturing/orders", {
-        headers: { "Content-Type": "application/json" },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setPendingOrders(data.data || []);
-      }
-    } catch (e) {
-      console.error("Failed to load MOs", e);
-    }
-  }
-
-  async function fetchInspections() {
-    try {
-      const res = await fetch("/api/v1/qc/inspections", {
-        headers: { "Content-Type": "application/json" },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setInspections(data.data || []);
-      }
-    } catch (e) {
-      console.error("Failed to load inspections", e);
-    }
-  }
-
-  async function submitInspection(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
+  const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
-      const response = await fetch("/api/v1/qc/inspections", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error?.message || "Failed to create inspection");
-      }
-      setShowForm(false);
-      setNotice("QC inspection created successfully.");
-      await fetchInspections();
+      const [poRes, inRes] = await Promise.all([
+        fetch("/api/v1/quality/pending-orders"),
+        fetch("/api/v1/quality/inspections"),
+      ]);
+      if (!poRes.ok || !inRes.ok) throw new Error("Failed to load quality data");
+      const [poJson, inJson] = await Promise.all([poRes.json(), inRes.json()]);
+      setPendingOrders(poJson.data ?? []);
+      setInspections(inJson.data ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create inspection");
+      setError(err instanceof Error ? err.message : "Failed to load quality data");
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const selectedMo = pendingOrders.find((mo) => mo.id === formMoId);
+  const workOrders = selectedMo?.workOrders ?? [];
+
+  async function handleCreateInspection(event: React.FormEvent) {
+    event.preventDefault();
+    setError(null);
+    const inspected = Number(formInspected || 0);
+    const accepted = Number(formAccepted || 0);
+    const rejected = Number(formRejected || 0);
+    const rework = Number(formRework || 0);
+    if (accepted + rejected + rework !== inspected) {
+      setError("Accepted + rejected + rework must equal inspected quantity.");
+      return;
+    }
+    try {
+      const res = await fetch("/api/v1/quality/inspections", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          number: formNumber,
+          manufacturingOrderId: formMoId,
+          workOrderId: formWoId || undefined,
+          inspectedQty: String(inspected),
+          acceptedQty: String(accepted),
+          rejectedQty: String(rejected),
+          reworkQty: String(rework),
+          defectCode: formDefect || undefined,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error?.message || "Failed to create inspection");
+      setNotice("Inspection recorded.");
+      (event.currentTarget as HTMLFormElement).reset();
+      setFormMoId("");
+      setFormWoId("");
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create inspection");
+    }
+  }
+
+  async function handlePostInspection(event: React.FormEvent, id: string) {
+    event.preventDefault();
+    setError(null);
+    try {
+      const res = await fetch(`/api/v1/quality/inspections/${id}/post`, { method: "POST" });
+      if (!res.ok) throw new Error("Failed to post inspection");
+      setNotice("Inspection posted to inventory.");
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to post inspection");
     }
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <p className="text-sm font-medium text-blue-700">Quality Control</p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">Quality Control</h1>
-        <p className="mt-2 text-sm text-slate-600">Inspect production output, record accepted/rejected quantities, and post finished goods.</p>
-      </div>
+    <div className="space-y-5">
+      <PageHeader
+        eyebrow="Quality control"
+        title="Quality Control"
+        description="Inspect finished production before it reaches finished-goods stock."
+      />
 
-      {error ? <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
-      {notice ? <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{notice}</div> : null}
+      {error ? <Alert tone="danger" onClose={() => setError(null)}>{error}</Alert> : null}
+      {notice ? <Alert tone="success" onClose={() => setNotice(null)}>{notice}</Alert> : null}
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <section className="rounded-lg border border-slate-200 bg-white p-6">
-          <div className="flex flex-wrap items-center justify-between border-b border-slate-200 px-5 py-4">
-            <h2 className="font-semibold">Pending Inspections</h2>
-          </div>
-          <div className="p-4">
-            {pendingOrders.length === 0 ? (
-              <p className="text-sm text-slate-500">No pending inspections.</p>
+      <div className="grid gap-5 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader
+            description="Pending production waiting for quality inspection."
+            title="Pending Orders"
+          />
+          <CardBody className="p-0">
+            {loading ? (
+              <div className="p-8 text-center text-slate-500">Loading…</div>
+            ) : pendingOrders.length === 0 ? (
+              <EmptyState title="Nothing awaiting inspection" />
             ) : (
-              <div className="space-y-3">
-                {pendingOrders.map((bom) => (
-                  <div key={bom.id} className="rounded-lg border border-slate-200 p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex-1">
-                        <p className="font-medium text-slate-900">{bom.number}</p>
-                        <p className="text-xs text-slate-500">{bom.item.sku} · {bom.item.name}</p>
-                      </div>
-                    </div>
-                    <button
-                      className="rounded-md bg-blue-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-800"
-                      onClick={() => {
-                        setFormData({ ...formData, manufacturingOrderId: bom.id });
-                        setShowForm(true);
-                      }}
-                    >
-                      Inspect
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
-        <section className="rounded-lg border border-slate-200 bg-white p-6">
-          <div className="flex flex-wrap items-center justify-between border-b border-slate-200 px-5 py-4">
-            <h2 className="font-semibold">Create Inspection</h2>
-            <button
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
-              onClick={() => setShowForm(!showForm)}
-            >
-              {showForm ? "Hide Form" : "New Inspection"}
-            </button>
-          </div>
-          {showForm ? (
-            <form className="mt-4 space-y-4" onSubmit={submitInspection}>
-              <label className="block text-sm font-medium">Manufacturing Order</label>
-              <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" onChange={(event) => setFormData({ ...formData, manufacturingOrderId: event.target.value })} value={formData.manufacturingOrderId}>
-                <option value="">Select MO</option>
-                {pendingOrders.map((bom) => (
-                  <option key={bom.id} value={bom.id}>{bom.number}</option>
-                ))}
-              </select>
-              <label className="block text-sm font-medium mt-2">Inspected Quantity</label>
-              <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" onChange={(event) => setFormData({ ...formData, quantity: event.target.value })} required type="number" step="0.000001" value={formData.quantity} />
-              <label className="block text-sm font-medium mt-2">Accepted Quantity</label>
-              <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" onChange={(event) => setFormData({ ...formData, acceptedQty: event.target.value })} required type="number" step="0.000001" value={formData.acceptedQty} />
-              <label className="block text-sm font-medium mt-2">Rejected Quantity</label>
-              <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" onChange={(event) => setFormData({ ...formData, rejectedQty: event.target.value })} type="number" step="0.000001" value={formData.rejectedQty} />
-              <label className="block text-sm font-medium mt-2">Rework Quantity</label>
-              <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" onChange={(event) => setFormData({ ...formData, reworkQty: event.target.value })} type="number" step="0.000001" value={formData.reworkQty} />
-              <label className="block text-sm font-medium mt-2">Defect Classification</label>
-              <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" onChange={(event) => setFormData({ ...formData, defectClassification: event.target.value })} placeholder="e.g. Dimension mismatch" />
-              <label className="block text-sm font-medium mt-2">Notes</label>
-              <textarea className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" onChange={(event) => setFormData({ ...formData, notes: event.target.value })} value={formData.notes} rows={2} />
-              <button className="w-full rounded-md bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60" disabled={loading} type="submit">
-                {loading ? "Posting..." : "Post Inspection"}
-              </button>
-            </form>
-          ) : null}
-        </section>
-      </div>
-
-      <section className="rounded-lg border border-slate-200 bg-white p-6">
-        <div className="flex flex-wrap items-center justify-between border-b border-slate-200 px-5 py-4">
-          <h2 className="font-semibold">Inspection History</h2>
-        </div>
-        <div className="p-4">
-          {inspections.length === 0 ? (
-            <p className="text-sm text-slate-500">No inspections recorded.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b bg-slate-50 text-xs uppercase text-slate-500">
-                  <tr><th className="px-5 py-3">Number</th><th className="px-4 py-3">MO</th><th className="px-4 py-3 text-right">Accepted</th><th className="px-4 py-3 text-right">Rejected</th><th className="px-4 py-3 text-right">Rework</th><th className="px-5 py-3">Status</th></tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {inspections.map((inspection) => (
-                    <tr key={inspection.id}>
-                      <td className="px-5 py-3">{inspection.number}</td>
-                      <td className="px-4 py-3">{inspection.manufacturingOrder?.sku || "-"}</td>
-                      <td className="px-4 py-3 text-right">{inspection.acceptedQty}</td>
-                      <td className="px-4 py-3 text-right">{inspection.rejectedQty}</td>
-                      <td className="px-4 py-3 text-right">{inspection.reworkQty}</td>
-                      <td className="px-5 py-3"><span className={`rounded-full px-2 py-1 text-xs ${inspection.status === "POSTED" ? "bg-green-50 text-green-700" : "bg-slate-50 text-slate-500"}`}>{inspection.status}</span></td>
-                    </tr>
+              <Table>
+                <TableHead>
+                  <Tr>
+                    <Th>MO number</Th>
+                    <Th>Item</Th>
+                    <Th align="right">Produced</Th>
+                    <Th align="right">Work orders</Th>
+                  </Tr>
+                </TableHead>
+                <TableBody>
+                  {pendingOrders.map((mo) => (
+                    <Tr key={mo.id}>
+                      <Td className="font-medium tnum">{mo.number}</Td>
+                      <Td className="text-slate-600 tnum">{mo.item.sku} — {mo.item.name}</Td>
+                      <Td align="right" className="tnum text-slate-600">{formatQuantity(mo.quantity)}</Td>
+                      <Td align="right" className="tnum text-slate-600">{mo.workOrders.length}</Td>
+                    </Tr>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </section>
+                </TableBody>
+              </Table>
+            )}
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader title="Create Inspection" />
+          <CardBody className="space-y-4">
+            <form className="space-y-4" onSubmit={handleCreateInspection}>
+              <Field label="Inspection number" required>
+                <Input name="number" placeholder="INS-2026-001" required value={formNumber} onChange={(e) => setFormNumber(e.target.value)} />
+              </Field>
+              <Field label="Manufacturing order" required>
+                <Select name="manufacturingOrderId" required onChange={(e) => setFormMoId(e.target.value)} value={formMoId}>
+                  <option value="">Select a pending MO</option>
+                  {pendingOrders.map((mo) => (
+                    <option key={mo.id} value={mo.id}>{mo.number} · {mo.item.sku}</option>
+                  ))}
+                </Select>
+              </Field>
+              {workOrders.length > 0 ? (
+                <Field label="Work order">
+                  <Select name="workOrderId" onChange={(e) => setFormWoId(e.target.value)} value={formWoId}>
+                    <option value="">Select a work order (optional)</option>
+                    {workOrders.map((wo) => (
+                      <option key={wo.id} value={wo.id}>{wo.number}</option>
+                    ))}
+                  </Select>
+                </Field>
+              ) : null}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Inspected qty" required>
+                  <Input name="inspectedQty" type="number" step="0.000001" required value={formInspected} onChange={(e) => setFormInspected(e.target.value)} />
+                </Field>
+                <Field label="Accepted qty" required>
+                  <Input name="acceptedQty" type="number" step="0.000001" required value={formAccepted} onChange={(e) => setFormAccepted(e.target.value)} />
+                </Field>
+                <Field label="Rejected qty" required>
+                  <Input name="rejectedQty" type="number" step="0.000001" required value={formRejected} onChange={(e) => setFormRejected(e.target.value)} />
+                </Field>
+                <Field label="Rework qty" required>
+                  <Input name="reworkQty" type="number" step="0.000001" required value={formRework} onChange={(e) => setFormRework(e.target.value)} />
+                </Field>
+              </div>
+              <Field label="Defect code">
+                <Input name="defectCode" placeholder="e.g. cracked panel" value={formDefect} onChange={(e) => setFormDefect(e.target.value)} />
+              </Field>
+              <Button type="submit" variant="primary">Record inspection</Button>
+            </form>
+          </CardBody>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader title="Inspection History" />
+          <CardBody className="p-0">
+            {inspections.length === 0 ? (
+              <EmptyState title="No inspections yet" />
+            ) : (
+              <Table>
+                <TableHead>
+                  <Tr>
+                    <Th>Number</Th>
+                    <Th>MO</Th>
+                    <Th>Status</Th>
+                    <Th align="right">Inspected</Th>
+                    <Th align="right">Accepted</Th>
+                    <Th align="right">Rejected</Th>
+                    <Th align="right">Rework</Th>
+                    <Th align="right">Inspected at</Th>
+                  </Tr>
+                </TableHead>
+                <TableBody>
+                  {inspections.map((ins) => (
+                    <Tr key={ins.id}>
+                      <Td className="font-medium tnum">{ins.number}</Td>
+                      <Td className="text-slate-600 tnum">{ins.manufacturingOrder.number}</Td>
+                      <Td>{<StatusBadge status={ins.status} />}</Td>
+                      <Td align="right" className="tnum text-slate-600">{formatQuantity(ins.inspectedQty)}</Td>
+                      <Td align="right" className="tnum text-slate-600">{formatQuantity(ins.acceptedQty)}</Td>
+                      <Td align="right" className="tnum text-slate-600">{formatQuantity(ins.rejectedQty)}</Td>
+                      <Td align="right" className="tnum text-slate-600">{formatQuantity(ins.reworkQty)}</Td>
+                      <Td align="right" className="tnum text-slate-500">{formatDate(ins.inspectedAt)}</Td>
+                    </Tr>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardBody>
+        </Card>
+      </div>
     </div>
   );
 }

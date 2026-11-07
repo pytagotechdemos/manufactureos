@@ -1,81 +1,146 @@
-import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth-session";
-import { requirePermission } from "@/lib/authorize";
+"use client";
 
-export default async function InventoryPage() {
-  const user = await getCurrentUser();
-  if (!user) {
-    redirect("/login");
-  }
-  await requirePermission(user.id, "inventory.read");
+import { useCallback, useEffect, useState } from "react";
+import { PageHeader } from "@/components/ui/page-header";
+import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Stat, StatGrid } from "@/components/ui/stat";
+import { StatusBadge } from "@/components/ui/badge";
+import { Table, TableBody, TableHead, Td, Th, Tr } from "@/components/ui/table";
+import { EmptyState } from "@/components/ui/empty-state";
+import { SearchInput } from "@/components/ui/form";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { formatQuantity, formatMoney } from "@/lib/format";
+
+type BalanceRow = {
+  id: string;
+  item: { id: string; sku: string; name: string; baseUom: { code: string } | null };
+  warehouse: { id: string; code: string; name: string };
+  onHand: string;
+  reserved: string;
+  blocked: string;
+  available: string;
+  averageUnitCost: string | null;
+};
+
+type RawBalanceRow = Omit<BalanceRow, "available">;
+
+export default function InventoryPage() {
+  const [balances, setBalances] = useState<BalanceRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/v1/inventory/balances?limit=200", {
+        headers: { Accept: "application/json" },
+      });
+      if (!res.ok) throw new Error("Failed to load stock balances");
+      const json = await res.json();
+      setBalances((json.data as RawBalanceRow[] ?? []).map((row) => ({
+        ...row,
+        available:
+          Number(row.onHand) - Number(row.reserved) - Number(row.blocked) < 0
+            ? "0"
+            : String(Number(row.onHand) - Number(row.reserved) - Number(row.blocked)),
+      })));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load stock balances");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const filtered = balances.filter(
+    (row) =>
+      row.item.sku.toLowerCase().includes(search.toLowerCase()) ||
+      row.item.name.toLowerCase().includes(search.toLowerCase()) ||
+      row.warehouse.code.toLowerCase().includes(search.toLowerCase()),
+  );
+
+  const totals = balances.reduce(
+    (acc, row) => {
+      acc.onHand += Number(row.onHand);
+      acc.reserved += Number(row.reserved);
+      acc.blocked += Number(row.blocked);
+      acc.available += Number(row.available);
+      return acc;
+    },
+    { onHand: 0, reserved: 0, blocked: 0, available: 0 },
+  );
 
   return (
-    <div className="space-y-6">
-      <div>
-        <p className="text-sm font-medium text-blue-700">Inventory</p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">Inventory</h1>
-        <p className="mt-2 text-sm text-slate-600">Stock balances, receipts, issues, transfers, and adjustments.</p>
-      </div>
-      <div className="grid gap-6 lg:grid-cols-3">
-        <section className="rounded-lg border border-slate-200 bg-white p-6">
-          <div className="flex flex-wrap items-center justify-between border-b border-slate-200 px-5 py-4">
-            <h2 className="font-semibold">Stock Balances</h2>
-          </div>
-          <div className="p-4">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b bg-slate-50 text-xs uppercase text-slate-500">
-                  <tr>
-                    <th className="px-3 py-2">Item</th>
-                    <th className="px-4 py-3 text-right">On Hand</th>
-                    <th className="px-4 py-3 text-right">Reserved</th>
-                    <th className="px-4 py-3 text-right">Blocked</th>
-                    <th className="px-5 py-3 text-right">Available</th>
-                  </tr></thead>
-                  <tbody className="divide-y divide-slate-100">
-                    <tr>
-                      <td className="px-3 py-2">No items</td>
-                      <td className="px-4 py-3 text-right">0</td>
-                      <td className="px-4 py-3 text-right">0</td>
-                      <td className="px-4 py-3 text-right">0</td>
-                      <td className="px-5 py-3 text-right">0</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-        </section>
-        <section className="rounded-lg border border-slate-200 bg-white p-6">
-          <h2 className="font-semibold">Post Goods Receipt</h2>
-          <form className="mt-4 space-y-4">
-            <label className="block text-sm font-medium">Item SKU</label>
-            <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" type="text" placeholder="Item SKU" />
-            <label className="block text-sm font-medium">Quantity</label>
-            <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" type="number" step="0.000001" />
-            <label className="block text-sm font-medium">Source Document</label>
-            <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" placeholder="PO number" />
-            <label className="block text-sm font-medium">Unit Cost</label>
-            <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" type="number" step="0.0001" />
-            <button className="w-full rounded-md bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-800">
-              Post Receipt
-            </button>
-          </form>
-        </section>
-        <section className="rounded-lg border border-slate-200 bg-white p-6">
-          <h2 className="font-semibold">Issue Material</h2>
-          <form className="mt-4 space-y-4">
-            <label className="block text-sm font-medium">Manufacturing Order</label>
-            <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" type="text" placeholder="MO number" />
-            <label className="block text-sm font-medium">Item</label>
-            <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" type="text" placeholder="Item SKU" />
-            <label className="block text-sm font-medium">Quantity</label>
-            <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" type="number" step="0.000001" />
-            <button className="w-full rounded-md bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-800">
-              Post Issue
-            </button>
-          </form>
-        </section>
-      </div>
+    <div className="space-y-5">
+      <PageHeader
+        eyebrow="Inventory"
+        title="Stock balances"
+        description="On-hand, reserved and blocked stock by item and warehouse."
+      />
+
+      {error ? <Alert tone="danger" onClose={() => setError(null)}>{error}</Alert> : null}
+
+      <StatGrid>
+        <Stat label="Stock lines" value={balances.length} />
+        <Stat label="On hand" hint="units" value={formatQuantity(totals.onHand)} />
+        <Stat label="Reserved" hint="units" value={formatQuantity(totals.reserved)} />
+        <Stat label="Blocked" hint="units" tone="warning" value={formatQuantity(totals.blocked)} />
+        <Stat label="Available" hint="on hand − reserved − blocked" tone="success" value={formatQuantity(totals.available)} />
+      </StatGrid>
+
+      <Card>
+        <CardHeader
+          actions={<SearchInput value={search} onChange={setSearch} placeholder="Search item, SKU or warehouse…" />}
+          description={`${balances.length} stock line${balances.length === 1 ? "" : "s"} across warehouses.`}
+          title="Stock Balances"
+        />
+        <CardBody className="p-0">
+          {loading ? (
+            <div className="p-8 text-center text-slate-500">Loading…</div>
+          ) : filtered.length === 0 ? (
+            <EmptyState title="No stock matches your search" />
+          ) : (
+            <Table>
+              <TableHead>
+                <Tr>
+                  <Th>SKU</Th>
+                  <Th>Item</Th>
+                  <Th>Warehouse</Th>
+                  <Th align="right">On hand</Th>
+                  <Th align="right">Reserved</Th>
+                  <Th align="right">Blocked</Th>
+                  <Th align="right">Available</Th>
+                  <Th align="right">Avg. cost</Th>
+                </Tr>
+              </TableHead>
+              <TableBody>
+                {filtered.map((row) => (
+                  <Tr key={row.id}>
+                    <Td className="font-medium tnum">{row.item.sku}</Td>
+                    <Td className="text-slate-600">{row.item.name}</Td>
+                    <Td className="text-slate-600 tnum">{row.warehouse.code}</Td>
+                    <Td align="right" className="tnum text-slate-600">{formatQuantity(row.onHand)}</Td>
+                    <Td align="right" className="tnum text-slate-600">{formatQuantity(row.reserved)}</Td>
+                    <Td align="right" className="tnum text-slate-600">{formatQuantity(row.blocked)}</Td>
+                    <Td align="right" className={`tnum font-medium ${Number(row.available) <= 0 ? "text-red-600" : "text-slate-600"}`}>
+                      {formatQuantity(row.available)}
+                    </Td>
+                    <Td align="right" className="tnum text-slate-600">
+                      {row.averageUnitCost ? formatMoney(row.averageUnitCost) : "—"}
+                    </Td>
+                  </Tr>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardBody>
+      </Card>
     </div>
   );
 }

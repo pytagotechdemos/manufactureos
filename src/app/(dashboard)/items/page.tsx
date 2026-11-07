@@ -1,87 +1,131 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { PageHeader } from "@/components/ui/page-header";
+import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { StatusBadge } from "@/components/ui/badge";
+import { Table, TableBody, TableHead, Td, Th, Tr } from "@/components/ui/table";
+import { EmptyState } from "@/components/ui/empty-state";
+import { SearchInput } from "@/components/ui/form";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { formatDate } from "@/lib/format";
 
-interface Item {
+interface ItemRow {
   id: string;
   sku: string;
   name: string;
-  category: string;
   itemType: string;
-  supplyType: string;
   status: string;
+  baseUom: { code: string } | null;
+  createdAt: string;
 }
 
 export default function ItemsPage() {
+  const [items, setItems] = useState<ItemRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const items: Item[] = [
-    { id: "1", sku: "RM-001", name: "Oak Board", category: "Raw Material", itemType: "RAW_MATERIAL", supplyType: "BUY", status: "ACTIVE" },
-    { id: "2", sku: "PC-001", name: "Steel Brackets", category: "Purchased Component", itemType: "PURCHASED_COMPONENT", supplyType: "BUY", status: "ACTIVE" },
-    { id: "3", sku: "FG-001", name: "Wooden Office Desk", category: "Finished Goods", itemType: "FINISHED_GOODS", supplyType: "MAKE", status: "ACTIVE" },
-  ];
 
-  const filteredItems = items.filter((item) =>
-    item.sku.toLowerCase().includes(search.toLowerCase()) ||
-    item.name.toLowerCase().includes(search.toLowerCase())
+  const loadItems = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/v1/items?limit=100`, { headers: { Accept: "application/json" } });
+      if (!res.ok) throw new Error("Failed to load items");
+      const json = await res.json();
+      setItems(json.data ?? []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load items");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadItems();
+  }, [loadItems]);
+
+  const filtered = items.filter(
+    (item) =>
+      item.sku.toLowerCase().includes(search.toLowerCase()) ||
+      item.name.toLowerCase().includes(search.toLowerCase()),
   );
 
+  async function handleCreateItem() {
+    setNotice("Item creation form is not implemented yet — seed data already covers the demo scenario. Use the database seed or add items through an API client.");
+  }
+
   return (
-    <div className="space-y-6">
-      <div>
-        <p className="text-sm font-medium text-blue-700">Master Data</p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">Item Master</h1>
-        <p className="mt-2 text-sm text-slate-600">Manage item master data - raw materials, purchased components, sub-assemblies, and finished goods.</p>
-      </div>
-      <div className="grid gap-6 lg:grid-cols-3">
-        <section className="rounded-lg border border-slate-200 bg-white p-6">
-          <div className="border-b border-slate-200 px-5 py-4">
-            <h2 className="font-semibold">Item Master</h2>
-            <p className="mt-1 text-sm text-slate-500">Manage items, raw materials, purchased components, sub-assemblies, and finished goods.</p>
-          </div>
-          <div className="p-4">
-            <div className="space-y-3">
-              <input
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                placeholder="Search items..."
-                onChange={(event) => setSearch(event.target.value)}
-                value={search}
-              />
-              <button className="w-full rounded-md bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-800 mt-2">
-                Create New Item
-              </button>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b bg-slate-50 text-xs uppercase text-slate-500">
-                  <tr>
-                    <th className="px-5 py-3">SKU</th>
-                    <th className="px-4 py-3">Name</th>
-                    <th className="px-4 py-3">Category</th>
-                    <th className="px-4 py-3 text-right">Type</th>
-                    <th className="px-4 py-3 text-right">Status</th>
-                    <th className="px-5 py-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredItems.map((item) => (
-                    <tr key={item.id}>
-                      <td className="px-5 py-3 font-medium">{item.sku}</td>
-                      <td className="px-4 py-3">{item.name}</td>
-                      <td className="px-4 py-3 text-slate-600">{item.category}</td>
-                      <td className="px-4 py-3 text-slate-600">{item.itemType}</td>
-                      <td className="px-4 py-3"><span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700">{item.status}</span></td>
-                      <td className="px-5 py-3 text-right">
-                        <button className="text-sm text-blue-600 hover:underline mr-2">View</button>
-                        <button className="text-sm text-slate-600 hover:underline">Edit</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-      </div>
+    <div className="space-y-5">
+      <PageHeader
+        eyebrow="Master data"
+        title="Item Master"
+        description="Raw materials, purchased components, sub-assemblies and finished goods."
+        actions={
+          <Button onClick={handleCreateItem} variant="primary">
+            Create item
+          </Button>
+        }
+      />
+
+      {error ? <Alert tone="danger" onClose={() => setError(null)}>{error}</Alert> : null}
+      {notice ? <Alert tone="info" onClose={() => setNotice(null)}>{notice}</Alert> : null}
+
+      <Card>
+        <CardHeader
+          actions={<SearchInput value={search} onChange={setSearch} placeholder="Search items…" />}
+          description={`${items.length} active item${items.length === 1 ? "" : "s"} in the master data.`}
+          title="Item Master"
+        />
+        <CardBody className="p-0">
+          <Table>
+            <TableHead>
+              <Tr>
+                <Th>SKU</Th>
+                <Th>Name</Th>
+                <Th>Type</Th>
+                <Th align="right">Base UOM</Th>
+                <Th>Status</Th>
+                <Th align="right">Added</Th>
+              </Tr>
+            </TableHead>
+            <TableBody>
+              {loading ? (
+                <Tr>
+                  <Td colSpan={6}>
+                    <div className="flex h-16 items-center justify-center gap-2 text-[13px] text-slate-500">
+                      Loading…
+                    </div>
+                  </Td>
+                </Tr>
+              ) : filtered.length === 0 ? (
+                <Tr>
+                  <Td colSpan={6}>
+                    <EmptyState compact title="No items match your search" />
+                  </Td>
+                </Tr>
+              ) : (
+                filtered.map((item) => (
+                  <Tr key={item.id}>
+                    <Td className="font-medium tnum">{item.sku}</Td>
+                    <Td className="text-slate-600">{item.name}</Td>
+                    <Td className="text-slate-600">{item.itemType.replace(/_/g, " ")}</Td>
+                    <Td align="right" className="tnum text-slate-600">
+                      {item.baseUom?.code ?? "—"}
+                    </Td>
+                    <Td>{<StatusBadge status={item.status} />}</Td>
+                    <Td align="right" className="tnum text-slate-500">
+                      {formatDate(item.createdAt)}
+                    </Td>
+                  </Tr>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardBody>
+      </Card>
     </div>
   );
 }
