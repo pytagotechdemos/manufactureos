@@ -26,18 +26,17 @@ export default function ItemsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
 
   const loadItems = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const res = await fetch(`/api/v1/items?limit=100`, { headers: { Accept: "application/json" } });
-      if (!res.ok) throw new Error("Failed to load items");
+      if (!res.ok) throw new Error("Gagal memuat barang");
       const json = await res.json();
       setItems(json.data ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load items");
+      setError(err instanceof Error ? err.message : "Gagal memuat barang");
     } finally {
       setLoading(false);
     }
@@ -47,25 +46,21 @@ export default function ItemsPage() {
     loadItems();
   }, [loadItems]);
 
-  const filtered = items.filter(
-    (item) =>
-      item.sku.toLowerCase().includes(search.toLowerCase()) ||
-      item.name.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filtered = items;
 
   async function handleCreateItem() {
-    setNotice("Item creation form is not implemented yet — seed data already covers the demo scenario. Use the database seed or add items through an API client.");
+    setNotice("Form pembuatan barang belum diimplementasikan — data contoh seed sudah mencakup skenario demo. Gunakan database seed atau tambahkan barang melalui klien API.");
   }
 
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Master data"
-        title="Item Master"
-        description="Raw materials, purchased components, sub-assemblies and finished goods."
+        eyebrow="Data master"
+        title="Data Master Barang"
+        description="Bahan baku, komponen pembelian, sub-assembly dan barang jadi."
         actions={
           <Button onClick={handleCreateItem} variant="primary">
-            Create item
+            Buat barang
           </Button>
         }
       />
@@ -77,22 +72,22 @@ export default function ItemsPage() {
         <CardHeader
           actions={
             <div className="flex items-end gap-2 p-4">
-              <SearchInput placeholder="Search items…" />
+              <SearchInput placeholder="Cari barang…" />
             </div>
           }
-          description={`${items.length} active item${items.length === 1 ? "" : "s"} in the master data.`}
-          title="Item Master"
+          description={`${items.length} barang aktif${items.length === 1 ? "" : "s"} dalam data master.`}
+          title="Data Master Barang"
         />
         <CardBody className="p-0">
           <Table>
             <TableHead>
               <Tr>
                 <Th>SKU</Th>
-                <Th>Name</Th>
-                <Th>Type</Th>
-                <Th align="right">Base UOM</Th>
+                <Th>Nama</Th>
+                <Th>Tipe</Th>
+                <Th align="right">UOM Dasar</Th>
                 <Th>Status</Th>
-                <Th align="right">Added</Th>
+                <Th align="right">Ditambahkan</Th>
               </Tr>
             </TableHead>
             <TableBody>
@@ -100,14 +95,14 @@ export default function ItemsPage() {
                 <Tr>
                   <Td colSpan={6}>
                     <div className="flex h-16 items-center justify-center gap-2 text-[13px] text-slate-500">
-                      Loading…
+                      Memuat…
                     </div>
                   </Td>
                 </Tr>
               ) : filtered.length === 0 ? (
                 <Tr>
                   <Td colSpan={6}>
-                    <EmptyState compact title="No items match your search" />
+                    <EmptyState compact title="Tidak ada barang yang cocok dengan pencarian" />
                   </Td>
                 </Tr>
               ) : (

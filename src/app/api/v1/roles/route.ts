@@ -9,7 +9,8 @@ export async function GET() {
     if (!access) return NextResponse.json({ error: { code: "UNAUTHORIZED", message: "Authentication required" } }, { status: 401 });
     await requirePermission(access.id, "users.manage");
     return NextResponse.json({ data: await prisma.role.findMany({ orderBy: { code: "asc" }, select: { id: true, code: true, name: true, permissions: { select: { permission: { select: { code: true } } } } } }) });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: { code: "INTERNAL_ERROR", message: "Request failed" } }, { status: 500 });
   }
 }
+

@@ -3,7 +3,6 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { requirePermission } from "@/lib/authorize";
 import { prisma } from "@/lib/prisma";
 import { ProcurementService } from "@/modules/procurement/application/procurement-service";
-import { goodsReceiptCreateSchema } from "@/modules/procurement/application/procurement-validation";
 import { procurementErrorResponse } from "../_shared";
 
 const service = new ProcurementService(prisma);
@@ -26,8 +25,8 @@ export async function GET() {
       },
     });
     return NextResponse.json({ data });
-  } catch (error) {
-    return procurementErrorResponse(error);
+  } catch {
+    return procurementErrorResponse(undefined);
   }
 }
 
@@ -41,7 +40,8 @@ export async function POST(request: Request) {
     const body = await request.json();
     const receipt = await service.createGoodsReceipt(access.id, body);
     return NextResponse.json({ data: receipt }, { status: 201 });
-  } catch (error) {
-    return procurementErrorResponse(error);
+  } catch {
+    return procurementErrorResponse(undefined);
   }
 }
+

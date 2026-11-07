@@ -37,11 +37,11 @@ export function SidebarContent({ user, onNavigate }: { user: SessionUser; onNavi
         </span>
         <span className="min-w-0">
           <span className="block truncate text-[13px] leading-4 font-semibold text-slate-900">ManufactureOS</span>
-          <span className="block text-[11px] leading-4 text-slate-500">Manufacturing ERP</span>
+          <span className="block text-[11px] leading-4 text-slate-500">ERP Manufaktur</span>
         </span>
       </div>
 
-      <nav aria-label="Main navigation" className="scroll-area flex-1 overflow-y-auto px-2.5 py-3">
+      <nav aria-label="Navigasi utama" className="scroll-area flex-1 overflow-y-auto px-2.5 py-3">
         {navGroups.map((group) => (
           <div className="mb-4 last:mb-0" key={group.label ?? "root"}>
             {group.label ? (
@@ -91,10 +91,10 @@ export function SidebarContent({ user, onNavigate }: { user: SessionUser; onNavi
             </span>
           </span>
           <button
-            aria-label="Sign out"
+            aria-label="Keluar"
             className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
             onClick={handleSignOut}
-            title="Sign out"
+            title="Keluar"
             type="button"
           >
             <LogOut aria-hidden className="size-4" />

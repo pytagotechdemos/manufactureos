@@ -97,7 +97,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
 
 /** Search box with an inline magnifier; used in table toolbars. Manages its own value internally so it can be rendered from a Server Component without passing event handlers across the RSC boundary. */
 export function SearchInput({
-  placeholder = "Search…",
+  placeholder = "Cari…",
   className = "",
 }: {
   placeholder?: string;

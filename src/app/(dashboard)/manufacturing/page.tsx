@@ -42,13 +42,13 @@ export default function ManufacturingPage() {
         fetch("/api/v1/warehouses"),
         fetch("/api/v1/items?limit=100"),
       ]);
-      if (!moRes.ok || !whRes.ok || !itemRes.ok) throw new Error("Failed to load manufacturing data");
+      if (!moRes.ok || !whRes.ok || !itemRes.ok) throw new Error("Gagal memuat data produksi");
       const [moJson, whJson, itemJson] = await Promise.all([moRes.json(), whRes.json(), itemRes.json()]);
       setOrders(moJson.data ?? []);
       setWarehouses(whJson.data ?? []);
       setItems(itemJson.data ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load manufacturing data");
+      setError(err instanceof Error ? err.message : "Gagal memuat data produksi");
     } finally {
       setLoading(false);
     }
@@ -64,15 +64,15 @@ export default function ManufacturingPage() {
   async function handleCreateMo(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
-    setNotice("Creating an MO requires an approved MRP recommendation. Run MRP in Planning first, then release the MO from the generated recommendation.");
+    setNotice("Membuat MO memerlukan rekomendasi MRP yang disetujui. Jalankan MRP di Perencanaan terlebih dahulu, lalu rilis MO dari rekomendasi yang dihasilkan.");
   }
 
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Operations"
-        title="Manufacturing"
-        description="Manufacturing orders, work orders and production output."
+        eyebrow="Operasi"
+        title="Produksi"
+        description="Pesanan produksi, pesanan kerja dan hasil produksi."
       />
 
       {error ? <Alert tone="danger" onClose={() => setError(null)}>{error}</Alert> : null}
@@ -80,22 +80,22 @@ export default function ManufacturingPage() {
 
       <div className="grid gap-5 lg:grid-cols-3">
         <Card className="lg:col-span-2">
-          <CardHeader title="Manufacturing Orders" />
+          <CardHeader title="Pesanan Produksi" />
           <CardBody className="p-0">
             {loading ? (
-              <div className="p-8 text-center text-slate-500">Loading…</div>
+              <div className="p-8 text-center text-slate-500">Memuat…</div>
             ) : orders.length === 0 ? (
-              <EmptyState title="No manufacturing orders yet" />
+              <EmptyState title="Belum ada pesanan produksi" />
             ) : (
               <Table>
                 <TableHead>
                   <Tr>
-                    <Th>Number</Th>
-                    <Th>Item</Th>
-                    <Th align="right">Qty</Th>
+                    <Th>Nomor</Th>
+                    <Th>Barang</Th>
+                    <Th align="right">Kuantitas</Th>
                     <Th>Status</Th>
-                    <Th align="right">Warehouse</Th>
-                    <Th align="right">Created</Th>
+                    <Th align="right">Gudang</Th>
+                    <Th align="right">Dibuat</Th>
                   </Tr>
                 </TableHead>
                 <TableBody>
@@ -118,42 +118,42 @@ export default function ManufacturingPage() {
         </Card>
 
         <Card>
-          <CardHeader title="Create Manufacturing Order" description="Requires an MRP recommendation first." />
+          <CardHeader title="Buat Pesanan Produksi" description="Memerlukan rekomendasi MRP terlebih dahulu." />
           <CardBody className="space-y-4">
             <Alert tone="info">
-              Create MO is wired to the MRP recommendation flow. Select the item and quantity below — the recommendation linkage will be enabled once the Planning module generates a run.
+              Buat MO dihubungkan ke alur rekomendasi MRP. Pilih barang dan kuantitas di bawah — penautan rekomendasi akan diaktifkan setelah modul Perencanaan menghasilkan suatu run.
             </Alert>
             <form className="space-y-4" onSubmit={handleCreateMo}>
-              <Field label="Item" required>
+              <Field label="Barang" required>
                 <Select name="itemId" required>
-                  <option value="">Select item</option>
+                  <option value="">Pilih barang</option>
                   {items.map((it) => (
                     <option key={it.id} value={it.id}>{it.sku} — {it.name}</option>
                   ))}
                 </Select>
               </Field>
-              <Field label="Planned quantity" required>
+              <Field label="Kuantitas rencana" required>
                 <Input name="quantity" type="number" step="0.000001" required />
               </Field>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Finished goods warehouse" required>
+                <Field label="Gudang barang jadi" required>
                   <Select name="warehouseId" required>
-                    <option value="">Select warehouse</option>
+                    <option value="">Pilih gudang</option>
                     {nonWip.map((w) => (
                       <option key={w.id} value={w.id}>{w.code} — {w.name}</option>
                     ))}
                   </Select>
                 </Field>
-                <Field label="WIP warehouse" required>
+                <Field label="Gudang WIP" required>
                   <Select name="wipWarehouseId" required>
-                    <option value="">Select WIP warehouse</option>
+                    <option value="">Pilih gudang WIP</option>
                     {wip.map((w) => (
                       <option key={w.id} value={w.id}>{w.code} — {w.name}</option>
                     ))}
                   </Select>
                 </Field>
               </div>
-              <Button type="submit" variant="primary">Create manufacturing order</Button>
+              <Button type="submit" variant="primary">Buat pesanan produksi</Button>
             </form>
           </CardBody>
         </Card>

@@ -47,20 +47,19 @@ export default function QualityPage() {
   const [formRework, setFormRework] = useState("");
   const [formDefect, setFormDefect] = useState("");
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async () => {    setLoading(true);
     setError(null);
     try {
       const [poRes, inRes] = await Promise.all([
         fetch("/api/v1/quality/pending-orders"),
         fetch("/api/v1/quality/inspections"),
       ]);
-      if (!poRes.ok || !inRes.ok) throw new Error("Failed to load quality data");
+      if (!poRes.ok || !inRes.ok) throw new Error("Gagal memuat data kualitas");
       const [poJson, inJson] = await Promise.all([poRes.json(), inRes.json()]);
       setPendingOrders(poJson.data ?? []);
       setInspections(inJson.data ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load quality data");
+      setError(err instanceof Error ? err.message : "Gagal memuat data kualitas");
     } finally {
       setLoading(false);
     }
@@ -81,7 +80,7 @@ export default function QualityPage() {
     const rejected = Number(formRejected || 0);
     const rework = Number(formRework || 0);
     if (accepted + rejected + rework !== inspected) {
-      setError("Accepted + rejected + rework must equal inspected quantity.");
+      setError("Diterima + ditolak + rework harus sama dengan jumlah diperiksa.");
       return;
     }
     try {
@@ -100,36 +99,23 @@ export default function QualityPage() {
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error?.message || "Failed to create inspection");
-      setNotice("Inspection recorded.");
+      if (!res.ok) throw new Error(json.error?.message || "Gagal membuat pemeriksaan");
+      setNotice("Pemeriksaan dicatat.");
       (event.currentTarget as HTMLFormElement).reset();
       setFormMoId("");
       setFormWoId("");
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create inspection");
-    }
-  }
-
-  async function handlePostInspection(event: React.FormEvent, id: string) {
-    event.preventDefault();
-    setError(null);
-    try {
-      const res = await fetch(`/api/v1/quality/inspections/${id}/post`, { method: "POST" });
-      if (!res.ok) throw new Error("Failed to post inspection");
-      setNotice("Inspection posted to inventory.");
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to post inspection");
+      setError(err instanceof Error ? err.message : "Gagal membuat pemeriksaan");
     }
   }
 
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Quality control"
-        title="Quality Control"
-        description="Inspect finished production before it reaches finished-goods stock."
+        eyebrow="Kontrol kualitas"
+        title="Kontrol Kualitas"
+        description="Periksa hasil produksi sebelum mencapai stok barang jadi."
       />
 
       {error ? <Alert tone="danger" onClose={() => setError(null)}>{error}</Alert> : null}
@@ -138,22 +124,22 @@ export default function QualityPage() {
       <div className="grid gap-5 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader
-            description="Pending production waiting for quality inspection."
-            title="Pending Orders"
+            description="Produksi yang menunggu pemeriksaan kualitas."
+            title="Pesanan Menunggu"
           />
           <CardBody className="p-0">
             {loading ? (
-              <div className="p-8 text-center text-slate-500">Loading…</div>
+              <div className="p-8 text-center text-slate-500">Memuat…</div>
             ) : pendingOrders.length === 0 ? (
-              <EmptyState title="Nothing awaiting inspection" />
+              <EmptyState title="Tidak ada yang menunggu pemeriksaan" />
             ) : (
               <Table>
                 <TableHead>
                   <Tr>
-                    <Th>MO number</Th>
-                    <Th>Item</Th>
-                    <Th align="right">Produced</Th>
-                    <Th align="right">Work orders</Th>
+                    <Th>Nomor MO</Th>
+                    <Th>Barang</Th>
+                    <Th align="right">Diproduksi</Th>
+                    <Th align="right">Pesanan kerja</Th>
                   </Tr>
                 </TableHead>
                 <TableBody>
@@ -172,24 +158,24 @@ export default function QualityPage() {
         </Card>
 
         <Card>
-          <CardHeader title="Create Inspection" />
+          <CardHeader title="Buat Pemeriksaan" />
           <CardBody className="space-y-4">
             <form className="space-y-4" onSubmit={handleCreateInspection}>
-              <Field label="Inspection number" required>
+              <Field label="Nomor pemeriksaan" required>
                 <Input name="number" placeholder="INS-2026-001" required value={formNumber} onChange={(e) => setFormNumber(e.target.value)} />
               </Field>
-              <Field label="Manufacturing order" required>
+              <Field label="Pesanan produksi" required>
                 <Select name="manufacturingOrderId" required onChange={(e) => setFormMoId(e.target.value)} value={formMoId}>
-                  <option value="">Select a pending MO</option>
+                  <option value="">Pilih MO yang menunggu</option>
                   {pendingOrders.map((mo) => (
                     <option key={mo.id} value={mo.id}>{mo.number} · {mo.item.sku}</option>
                   ))}
                 </Select>
               </Field>
               {workOrders.length > 0 ? (
-                <Field label="Work order">
+                <Field label="Pesanan kerja">
                   <Select name="workOrderId" onChange={(e) => setFormWoId(e.target.value)} value={formWoId}>
-                    <option value="">Select a work order (optional)</option>
+                    <option value="">Pilih pesanan kerja (opsional)</option>
                     {workOrders.map((wo) => (
                       <option key={wo.id} value={wo.id}>{wo.number}</option>
                     ))}
@@ -197,44 +183,44 @@ export default function QualityPage() {
                 </Field>
               ) : null}
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Inspected qty" required>
+                <Field label="Kuantitas diperiksa" required>
                   <Input name="inspectedQty" type="number" step="0.000001" required value={formInspected} onChange={(e) => setFormInspected(e.target.value)} />
                 </Field>
-                <Field label="Accepted qty" required>
+                <Field label="Kuantitas terima" required>
                   <Input name="acceptedQty" type="number" step="0.000001" required value={formAccepted} onChange={(e) => setFormAccepted(e.target.value)} />
                 </Field>
-                <Field label="Rejected qty" required>
+                <Field label="Kuantitas tolak" required>
                   <Input name="rejectedQty" type="number" step="0.000001" required value={formRejected} onChange={(e) => setFormRejected(e.target.value)} />
                 </Field>
-                <Field label="Rework qty" required>
+                <Field label="Kuantitas rework" required>
                   <Input name="reworkQty" type="number" step="0.000001" required value={formRework} onChange={(e) => setFormRework(e.target.value)} />
                 </Field>
               </div>
-              <Field label="Defect code">
-                <Input name="defectCode" placeholder="e.g. cracked panel" value={formDefect} onChange={(e) => setFormDefect(e.target.value)} />
+              <Field label="Kode cacat">
+                <Input name="defectCode" placeholder="contoh: panel retak" value={formDefect} onChange={(e) => setFormDefect(e.target.value)} />
               </Field>
-              <Button type="submit" variant="primary">Record inspection</Button>
+              <Button type="submit" variant="primary">Catat pemeriksaan</Button>
             </form>
           </CardBody>
         </Card>
 
         <Card className="lg:col-span-2">
-          <CardHeader title="Inspection History" />
+          <CardHeader title="Riwayat Pemeriksaan" />
           <CardBody className="p-0">
             {inspections.length === 0 ? (
-              <EmptyState title="No inspections yet" />
+              <EmptyState title="Belum ada pemeriksaan" />
             ) : (
               <Table>
                 <TableHead>
                   <Tr>
-                    <Th>Number</Th>
+                    <Th>Nomor</Th>
                     <Th>MO</Th>
                     <Th>Status</Th>
-                    <Th align="right">Inspected</Th>
-                    <Th align="right">Accepted</Th>
-                    <Th align="right">Rejected</Th>
+                    <Th align="right">Diperiksa</Th>
+                    <Th align="right">Diterima</Th>
+                    <Th align="right">Ditolak</Th>
                     <Th align="right">Rework</Th>
-                    <Th align="right">Inspected at</Th>
+                    <Th align="right">Waktu diperiksa</Th>
                   </Tr>
                 </TableHead>
                 <TableBody>

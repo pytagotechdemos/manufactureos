@@ -19,7 +19,7 @@ export async function GET() {
     if (!access) return NextResponse.json({ error: { code: "UNAUTHORIZED", message: "Authentication required" } }, { status: 401 });
     await requirePermission(access.id, "users.manage");
     return NextResponse.json({ data: await prisma.user.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, email: true, status: true, createdAt: true, userRoles: { select: { role: { select: { code: true, name: true } } } } } }) });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: { code: "INTERNAL_ERROR", message: "Request failed" } }, { status: 500 });
   }
 }
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ data: { id: user.id, name: user.name, email: user.email, status: user.status } }, { status: 201 });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: { code: "INTERNAL_ERROR", message: "Request failed" } }, { status: 500 });
   }
 }

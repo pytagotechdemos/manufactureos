@@ -28,7 +28,7 @@ export function LoginForm() {
     });
 
     if (result.error) {
-      setError("Unable to sign in with those credentials.");
+      setError("Gagal masuk dengan kredensial tersebut.");
       setIsSubmitting(false);
       return;
     }
@@ -45,20 +45,20 @@ export function LoginForm() {
         </Alert>
       ) : null}
 
-      <Field htmlFor="email" label="Work email" required>
+      <Field htmlFor="email" label="Email kerja" required>
         <Input
           autoComplete="email"
           id="email"
           name="email"
           onChange={(event) => setEmail(event.target.value)}
-          placeholder="you@company.com"
+          placeholder="nama@perusahaan.com"
           required
           type="email"
           value={email}
         />
       </Field>
 
-      <Field htmlFor="password" label="Password" required>
+      <Field htmlFor="password" label="Kata sandi" required>
         <Input
           autoComplete="current-password"
           id="password"
@@ -71,12 +71,12 @@ export function LoginForm() {
       </Field>
 
       <Button className="w-full" loading={isSubmitting} type="submit" variant="primary">
-        {isSubmitting ? "Signing in…" : "Sign in"}
+        {isSubmitting ? "Memproses…" : "Masuk"}
         {isSubmitting ? null : <ArrowRight aria-hidden className="size-4" />}
       </Button>
 
-      <p className="text-center text-[12px] text-slate-500">
-        Trouble signing in? Contact your system administrator.
+      <p className="text-center text-[12px] text-slate-600">
+        Kesulitan masuk? Hubungi administrator sistem Anda.
       </p>
     </form>
   );

@@ -15,9 +15,8 @@ type MoRow = {
   status: string;
   workOrders: { id: string; number: string; status: string }[];
   createdAt: string;
+  _count?: { workOrders: number };
 };
-
-type RawMoRow = Omit<MoRow, "workOrders"> & { _count?: { workOrders: number } };
 
 export default function WorkOrdersPage() {
   const [orders, setOrders] = useState<MoRow[]>([]);
@@ -29,22 +28,22 @@ export default function WorkOrdersPage() {
     setError(null);
     try {
       const res = await fetch("/api/v1/manufacturing/orders?limit=100");
-      if (!res.ok) throw new Error("Failed to load manufacturing orders");
+      if (!res.ok) throw new Error("Gagal memuat pesanan produksi");
       const json = await res.json();
-      setOrders((json.data as RawMoRow[] ?? []).map((mo) => ({
+      setOrders((json.data as MoRow[] ?? []).map((mo) => ({
         id: mo.id,
         number: mo.number,
         item: mo.item,
         status: mo.status,
         workOrders: mo._count?.workOrders ? Array.from({ length: mo._count.workOrders }, (_, i) => ({
           id: `${mo.id}-wo-${i + 1}`,
-          number: `${mo.number}-WO-${i + 1}`,
+          number: `${mo.number}-PK-${i + 1}`,
           status: "DRAFT",
         })) : [],
         createdAt: mo.createdAt,
       })));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load manufacturing orders");
+      setError(err instanceof Error ? err.message : "Gagal memuat pesanan produksi");
     } finally {
       setLoading(false);
     }
@@ -59,30 +58,30 @@ export default function WorkOrdersPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Operations"
-        title="Work Order Execution"
-        description="Work orders live inside a manufacturing order. Start, pause and complete work from the manufacturing order detail."
+        eyebrow="Operasi"
+        title="Eksekusi Pesanan Kerja"
+        description="Pesanan kerja berada di dalam pesanan produksi. Mulai, jeda dan selesaikan pekerjaan dari detail pesanan produksi."
       />
 
       {error ? <Alert tone="danger" onClose={() => setError(null)}>{error}</Alert> : null}
 
       <div className="grid gap-5 lg:grid-cols-3">
         <Card className="lg:col-span-2">
-          <CardHeader title="Manufacturing Orders & Work Orders" />
+          <CardHeader title="Pesanan Produksi & Pesanan Kerja" />
           <CardBody className="p-0">
             {loading ? (
-              <div className="p-8 text-center text-slate-500">Loading…</div>
+              <div className="p-8 text-center text-slate-500">Memuat…</div>
             ) : orders.length === 0 ? (
-              <EmptyState title="No manufacturing orders yet" />
+              <EmptyState title="Belum ada pesanan produksi" />
             ) : (
               <Table>
                 <TableHead>
                   <Tr>
-                    <Th>MO number</Th>
-                    <Th>Item</Th>
-                    <Th>MO status</Th>
-                    <Th align="right">Work orders</Th>
-                    <Th align="right">Created</Th>
+                    <Th>Nomor MO</Th>
+                    <Th>Barang</Th>
+                    <Th>Status MO</Th>
+                    <Th align="right">Pesanan kerja</Th>
+                    <Th align="right">Dibuat</Th>
                   </Tr>
                 </TableHead>
                 <TableBody>
@@ -102,22 +101,22 @@ export default function WorkOrdersPage() {
         </Card>
 
         <Card>
-          <CardHeader title="How it works" description="Work order lifecycle: draft → released → in progress → completed." />
+          <CardHeader title="Cara kerja" description="Siklus pesanan kerja: draf → dirilis → diproses → selesai." />
           <CardBody className="space-y-3">
-            <p className="text-[13px] text-slate-600">1. A manufacturing order is created from an MRP recommendation (Planning).</p>
-            <p className="text-[13px] text-slate-600">2. Release the MO to reserve materials and generate work orders.</p>
-            <p className="text-[13px] text-slate-600">3. Start/pause/complete each work order and book actual time entries.</p>
-            <p className="text-[13px] text-slate-600">4. When all work orders complete, the MO moves to QC pending.</p>
+            <p className="text-[13px] text-slate-600">1. Pesanan produksi dibuat dari rekomendasi MRP (Perencanaan).</p>
+            <p className="text-[13px] text-slate-600">2. Rilis MO untuk menyediakan bahan dan menghasilkan pesanan kerja.</p>
+            <p className="text-[13px] text-slate-600">3. Mulai, jeda dan selesaikan setiap pesanan kerja serta catat entri waktu aktual.</p>
+            <p className="text-[13px] text-slate-600">4. Setelah semua pesanan kerja selesai, MO berinduk ke antre kualitas.</p>
           </CardBody>
         </Card>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-3">
         <Card className="lg:col-span-2">
-          <CardHeader title="Recent work orders" />
+          <CardHeader title="Pesanan kerja terbaru" />
           <CardBody className="p-0">
             {totalWorkOrders === 0 ? (
-              <EmptyState compact title="No work orders yet" description="Create and release a manufacturing order first." />
+              <EmptyState compact title="Belum ada pesanan kerja" description="Buat dan rilis pesanan produksi terlebih dahulu." />
             ) : (
               <Table>
                 <TableBody>
@@ -138,14 +137,14 @@ export default function WorkOrdersPage() {
         </Card>
 
         <Card>
-          <CardHeader title="Actions" description="Start, pause and complete require a work order id." />
+          <CardHeader title="Aksi" description="Mulai, jeda dan selesaikan memerlukan ID pesanan kerja." />
           <CardBody className="space-y-3">
-            <p className="text-[13px] text-slate-600">Work-order action endpoints are scoped to a specific work order:</p>
+            <p className="text-[13px] text-slate-600">Aksi pesanan kerja dilengkapi dengan ID pesanan kerja tertentu:</p>
             <ul className="list-disc list-inside space-y-1 text-[12px] text-slate-500">
-              <li>POST /api/v1/manufacturing/work-orders/[id]/start</li>
-              <li>POST /api/v1/manufacturing/work-orders/[id]/pause</li>
-              <li>POST /api/v1/manufacturing/work-orders/[id]/complete</li>
-              <li>POST /api/v1/manufacturing/work-orders/[id]/time-entries</li>
+              <li>POST /api/v1/manufacturing/work-orders/[id]/mulai</li>
+              <li>POST /api/v1/manufacturing/work-orders/[id]/jeda</li>
+              <li>POST /api/v1/manufacturing/work-orders/[id]/selesaikan</li>
+              <li>POST /api/v1/manufacturing/work-orders/[id]/entri-waktu</li>
             </ul>
           </CardBody>
         </Card>

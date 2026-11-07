@@ -15,7 +15,8 @@ export async function GET() {
     const access = await requireAdminLikeUser();
     if ("error" in access) return access.error;
     return NextResponse.json({ data: await prisma.supplier.findMany({ where: { status: "ACTIVE" }, orderBy: { name: "asc" }, select: { id: true, code: true, name: true } }) });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: { code: "INTERNAL_ERROR", message: "Request failed" } }, { status: 500 });
   }
 }
+

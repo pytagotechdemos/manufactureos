@@ -3,13 +3,13 @@ import { Factory } from "lucide-react";
 import { LoginForm } from "@/components/login-form";
 
 export const metadata: Metadata = {
-  title: "Sign in",
+  title: "Masuk",
 };
 
 const highlights = [
-  ["Closed workspace", "Accounts are provisioned by your administrator — no public sign-up."],
-  ["Traceable by design", "Every posting is validated, transactional and written to an audit trail."],
-  ["One flow, end to end", "Demand → MRP → purchasing → production → quality → costing."],
+  ["Workspace tertutup", "Akun disediakan oleh administrator Anda — tidak ada pendaftaran publik."],
+  ["Teracak dengan baik", "Setiap pencatternya divalidasi, transaksional, dan ditulis ke jejak audit."],
+  ["Satu alur, dari ujung ke ujung", "Permintaan → MRP → pembelian → produksi → kualitas → biaya."],
 ] as const;
 
 export default function LoginPage() {
@@ -34,9 +34,9 @@ export default function LoginPage() {
         </div>
 
         <div className="relative">
-          <p className="text-[11px] font-semibold tracking-widest text-brand-300 uppercase">Manufacturing ERP</p>
+          <p className="text-[11px] font-semibold tracking-widest text-brand-300 uppercase">ERP Manufaktur</p>
           <h1 className="mt-3 max-w-md text-3xl font-semibold tracking-tight text-balance text-white">
-            From demand to delivered cost, in one auditable system.
+            Dari permintaan hingga biaya tercapai, dalam satu sistem yang dapat dicek.
           </h1>
           <dl className="mt-8 space-y-4">
             {highlights.map(([term, description]) => (
@@ -48,7 +48,7 @@ export default function LoginPage() {
           </dl>
         </div>
 
-        <p className="relative text-[12px] text-slate-300/80">Discrete manufacturing · Asia/Jakarta</p>
+        <p className="relative text-[12px] text-slate-300/80">Manufaktur diskrit · Asia/Jakarta</p>
       </section>
 
       <section className="flex flex-1 items-center justify-center px-4 py-12">
@@ -57,14 +57,14 @@ export default function LoginPage() {
             <span className="flex size-9 items-center justify-center rounded-md bg-brand-600">
               <Factory aria-hidden className="size-5 text-white" />
             </span>
-            <h1 className="mt-4 text-xl font-semibold tracking-tight text-slate-900">Sign in to ManufactureOS</h1>
-            <p className="mt-1 text-[13px] text-slate-600">Access is provisioned by your system administrator.</p>
+            <h1 className="mt-4 text-xl font-semibold tracking-tight text-slate-900">Masuk ke ManufactureOS</h1>
+            <p className="mt-1 text-[13px] text-slate-600">Akses disediakan oleh administrator sistem Anda.</p>
           </div>
 
           <div className="hidden lg:block">
-            <p className="text-[11px] font-semibold tracking-wider text-brand-600 uppercase">Welcome back</p>
-            <h1 className="mt-1.5 text-xl font-semibold tracking-tight text-slate-900">Sign in to your workspace</h1>
-            <p className="mt-1 text-[13px] text-slate-600">Use the work email your administrator registered.</p>
+            <p className="text-[11px] font-semibold tracking-wider text-brand-600 uppercase">Selamat datang kembali</p>
+            <h1 className="mt-1.5 text-xl font-semibold tracking-tight text-slate-900">Masuk ke workspace Anda</h1>
+            <p className="mt-1 text-[13px] text-slate-600">Gunakan email kerja yang terdaftar oleh administrator.</p>
           </div>
 
           <div className="mt-7">

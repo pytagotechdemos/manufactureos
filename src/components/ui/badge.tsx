@@ -59,8 +59,54 @@ export function statusTone(status: string | null | undefined): Tone {
   return "neutral";
 }
 
+/** Ubah status enum ke Bahasa Indonesia. Satu tempat agar konsisten di semua layar. */
 export function humanize(value: string | null | undefined): string {
   if (!value) return "—";
+  const v = value.toUpperCase();
+  const idMap: Record<string, string> = {
+    DRAFT: "Draf",
+    IN_REVIEW: "Ditinjau",
+    APPROVED: "Disetujui",
+    OBSOLETE: "Kedaluwarsa",
+    ACTIVE: "Aktif",
+    INACTIVE: "Tidak aktif",
+    POSTED: "Diposting",
+    COMPLETED: "Selesai",
+    ACCEPTED: "Diterima",
+    CLOSED: "Tutup",
+    AVAILABLE: "Tersedia",
+    RELEASED: "Dirilis",
+    REJECTED: "Ditolak",
+    CANCELLED: "Dibatalkan",
+    CANCELED: "Dibatalkan",
+    BLOCKED: "Diblokir",
+    FAILED: "Gagal",
+    BANNED: "Dilarang",
+    DISABLED: "Dinonaktifkan",
+    ON_HOLD: "Tertunda",
+    IN_PROGRESS: "Diproses",
+    PLANNED: "Direncanakan",
+    STARTED: "Dimulai",
+    PARTIAL: "Sebagian",
+    PARTIALLY_RECEIVED: "Sebagian diterima",
+    OPEN: "Terbuka",
+    NEW: "Baru",
+    IDLE: "Tidak aktif",
+    PAUSED: "Dijeda",
+    READY: "Siap",
+    RESERVED: "Dipesan",
+    QC_PENDING: "Menunggu QC",
+    INSPECTION: "Pemeriksaan",
+    REWORK: "Rework",
+    BUY: "Beli",
+    MAKE: "Buat sendiri",
+    RAW_MATERIAL: "Bahan baku",
+    PURCHASED_COMPONENT: "Komponen pembelian",
+    SUB_ASSEMBLY: "Sub-assembly",
+    FINISHED_GOODS: "Barang jadi",
+    CONSUMABLE: "Konsumsi",
+  };
+  if (idMap[v]) return idMap[v];
   return value
     .replace(/_/g, " ")
     .toLowerCase()

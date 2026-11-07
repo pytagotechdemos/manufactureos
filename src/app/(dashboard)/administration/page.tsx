@@ -15,7 +15,7 @@ import { CreateUserForm } from "@/components/admin/create-user-form";
 import { ShieldCheck, Users } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Administration",
+  title: "Administrasi",
 };
 
 export default async function AdministrationPage() {
@@ -26,12 +26,12 @@ export default async function AdministrationPage() {
   if (!allowed) {
     return (
       <div className="space-y-5">
-        <PageHeader eyebrow="Access" title="Administration" description="People, roles and permissions." />
+        <PageHeader eyebrow="Akses" title="Administrasi" description="Manusia, peran dan izin." />
         <Card>
           <EmptyState
             icon={<ShieldCheck aria-hidden className="size-5" />}
-            title="You do not have access to administration"
-            description="This area requires the users.manage permission. Ask an administrator to grant you a role that includes it."
+            title="Anda tidak memiliki akses ke administrasi"
+            description="Area ini memerlukan izin users.manage. Minta administrator untuk memberikan peran yang meliputi izin ini."
           />
         </Card>
       </div>
@@ -67,34 +67,34 @@ export default async function AdministrationPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Access control"
-        title="Administration"
-        description="Provision people and inspect which permissions each role carries."
+        eyebrow="Kontrol akses"
+        title="Administrasi"
+        description="Buat pengguna dan periksa izin yang dimiliki setiap peran."
         actions={<CreateUserForm />}
       />
 
       <StatGrid>
-        <Stat label="People" hint={`${activeUsers} active`} value={users.length} />
-        <Stat label="Roles" hint="Assigned through user roles" value={roles.length} />
-        <Stat label="Permissions" hint="Checked server-side on every mutation" value={permissionCount} />
-        <Stat label="Your access" hint="Roles assigned to you" value={users.find((entry) => entry.email === user.email)?.userRoles.length ?? 0} tone="info" />
+        <Stat label="Pengguna" hint={`${activeUsers} aktif`} value={users.length} />
+        <Stat label="Peran" hint="Diassign melalui peran pengguna" value={roles.length} />
+        <Stat label="Izin" hint="Dicek sisi server pada setiap mutasi" value={permissionCount} />
+        <Stat label="Akses Anda" hint="Peran yang dimiliki Anda" value={users.find((entry) => entry.email === user.email)?.userRoles.length ?? 0} tone="info" />
       </StatGrid>
 
       <div className="grid gap-5 xl:grid-cols-3">
         <Card className="xl:col-span-2">
-          <CardHeader description="Accounts are created here; public sign-up stays disabled." title="People" />
+          <CardHeader description="Akun dibuat di sini; pendaftaran publik tetap dinonaktifkan." title="Pengguna" />
           <CardBody className="p-0">
             {users.length === 0 ? (
-              <EmptyState icon={<Users aria-hidden className="size-5" />} title="No accounts yet" />
+              <EmptyState icon={<Users aria-hidden className="size-5" />} title="Belum ada akun" />
             ) : (
               <Table>
                 <TableHead>
                   <Tr>
-                    <Th>Name</Th>
+                    <Th>Nama</Th>
                     <Th>Email</Th>
-                    <Th>Roles</Th>
+                    <Th>Peran</Th>
                     <Th>Status</Th>
-                    <Th align="right">Added</Th>
+                    <Th align="right">Ditambahkan</Th>
                   </Tr>
                 </TableHead>
                 <TableBody>
@@ -105,7 +105,7 @@ export default async function AdministrationPage() {
                       <Td>
                         <span className="flex flex-wrap gap-1">
                           {entry.userRoles.length === 0 ? (
-                            <span className="text-slate-400">No roles</span>
+                            <span className="text-slate-400">Tanpa peran</span>
                           ) : (
                             entry.userRoles.map(({ role }) => (
                               <Badge key={role.code} tone="neutral">
@@ -130,7 +130,7 @@ export default async function AdministrationPage() {
         </Card>
 
         <Card>
-          <CardHeader description="Every protected screen checks one of these codes." title="Roles & permissions" />
+          <CardHeader description="Setiap layar terlindung memeriksa salah satu kode ini." title="Peran & izin" />
           <CardBody className="scroll-area max-h-[520px] space-y-4 overflow-y-auto">
             {roles.map((role) => (
               <div className="border-b border-slate-100 pb-3 last:border-0 last:pb-0" key={role.id}>

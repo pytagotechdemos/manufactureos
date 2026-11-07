@@ -27,35 +27,35 @@ export type NavGroup = {
 
 export const navGroups: NavGroup[] = [
   {
-    items: [{ label: "Overview", href: "/overview", icon: LayoutDashboard }],
+    items: [{ label: "Ringkasan", href: "/overview", icon: LayoutDashboard }],
   },
   {
-    label: "Engineering",
+    label: "Teknik",
     items: [
-      { label: "Item Master", href: "/items", icon: Package },
-      { label: "Bills of Material", href: "/engineering", match: ["/engineering", "/boms"], icon: GitBranch },
+      { label: "Data Barang", href: "/items", icon: Package },
+      { label: "Bill of Material", href: "/engineering", match: ["/engineering", "/boms"], icon: GitBranch },
     ],
   },
   {
-    label: "Supply Chain",
+    label: "Rantai Pasok",
     items: [
-      { label: "Planning & MRP", href: "/planning", icon: CalendarRange },
-      { label: "Procurement", href: "/procurement", icon: ShoppingCart },
-      { label: "Inventory", href: "/inventory", icon: Warehouse },
+      { label: "Perencanaan & MRP", href: "/planning", icon: CalendarRange },
+      { label: "Pembelian", href: "/procurement", icon: ShoppingCart },
+      { label: "Inventori", href: "/inventory", icon: Warehouse },
     ],
   },
   {
-    label: "Operations",
+    label: "Operasi",
     items: [
-      { label: "Manufacturing", href: "/manufacturing", match: ["/manufacturing"], icon: Factory },
-      { label: "Quality Control", href: "/quality", icon: ClipboardCheck },
+      { label: "Produksi", href: "/manufacturing", match: ["/manufacturing"], icon: Factory },
+      { label: "Kualitas", href: "/quality", icon: ClipboardCheck },
     ],
   },
   {
-    label: "Insight",
+    label: "Wawasan",
     items: [
-      { label: "Costing & Reports", href: "/reports", icon: BarChart3 },
-      { label: "Administration", href: "/administration", icon: Settings },
+      { label: "Biaya & Laporan", href: "/reports", icon: BarChart3 },
+      { label: "Administrasi", href: "/administration", icon: Settings },
     ],
   },
 ];

@@ -38,7 +38,7 @@ export default function InventoryPage() {
       const res = await fetch("/api/v1/inventory/balances?limit=200", {
         headers: { Accept: "application/json" },
       });
-      if (!res.ok) throw new Error("Failed to load stock balances");
+      if (!res.ok) throw new Error("Gagal memuat saldo stok");
       const json = await res.json();
       setBalances((json.data as RawBalanceRow[] ?? []).map((row) => ({
         ...row,
@@ -48,7 +48,7 @@ export default function InventoryPage() {
             : String(Number(row.onHand) - Number(row.reserved) - Number(row.blocked)),
       })));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load stock balances");
+      setError(err instanceof Error ? err.message : "Gagal memuat saldo stok");
     } finally {
       setLoading(false);
     }
@@ -79,48 +79,48 @@ export default function InventoryPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Inventory"
-        title="Stock balances"
-        description="On-hand, reserved and blocked stock by item and warehouse."
+        eyebrow="Inventori"
+        title="Saldo stok"
+        description="Stok tersedia, dipesan dan diblokir menurut barang dan gudang."
       />
 
       {error ? <Alert tone="danger" onClose={() => setError(null)}>{error}</Alert> : null}
 
       <StatGrid>
-        <Stat label="Stock lines" value={balances.length} />
-        <Stat label="On hand" hint="units" value={formatQuantity(totals.onHand)} />
-        <Stat label="Reserved" hint="units" value={formatQuantity(totals.reserved)} />
-        <Stat label="Blocked" hint="units" tone="warning" value={formatQuantity(totals.blocked)} />
-        <Stat label="Available" hint="on hand − reserved − blocked" tone="success" value={formatQuantity(totals.available)} />
+        <Stat label="Baris stok" value={balances.length} />
+        <Stat label="Tersedia" hint="unit" value={formatQuantity(totals.onHand)} />
+        <Stat label="Dipesan" hint="unit" value={formatQuantity(totals.reserved)} />
+        <Stat label="Diblokir" hint="unit" tone="warning" value={formatQuantity(totals.blocked)} />
+        <Stat label="Tersisa" hint="tersedia − dipesan − diblokir" tone="success" value={formatQuantity(totals.available)} />
       </StatGrid>
 
       <Card>
         <CardHeader
           actions={
             <div className="flex items-end gap-2 p-4">
-              <SearchInput placeholder="Search item, SKU or warehouse…" />
+              <SearchInput placeholder="Cari barang, SKU atau gudang…" />
             </div>
           }
-          description={`${balances.length} stock line${balances.length === 1 ? "" : "s"} across warehouses.`}
-          title="Stock Balances"
+          description={`${balances.length} baris stok${balances.length === 1 ? "" : "s"} di seluruh gudang.`}
+          title="Saldo Stok"
         />
         <CardBody className="p-0">
           {loading ? (
-            <div className="p-8 text-center text-slate-500">Loading…</div>
+            <div className="p-8 text-center text-slate-500">Memuat…</div>
           ) : filtered.length === 0 ? (
-            <EmptyState title="No stock matches your search" />
+            <EmptyState title="Tidak ada stok yang cocok dengan pencarian" />
           ) : (
             <Table>
               <TableHead>
                 <Tr>
                   <Th>SKU</Th>
-                  <Th>Item</Th>
-                  <Th>Warehouse</Th>
-                  <Th align="right">On hand</Th>
-                  <Th align="right">Reserved</Th>
-                  <Th align="right">Blocked</Th>
-                  <Th align="right">Available</Th>
-                  <Th align="right">Avg. cost</Th>
+                  <Th>Barang</Th>
+                  <Th>Gudang</Th>
+                  <Th align="right">Tersedia</Th>
+                  <Th align="right">Dipesan</Th>
+                  <Th align="right">Diblokir</Th>
+                  <Th align="right">Tersisa</Th>
+                  <Th align="right">Biaya rata-rata</Th>
                 </Tr>
               </TableHead>
               <TableBody>
