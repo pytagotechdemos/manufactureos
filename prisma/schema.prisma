@@ -1,0 +1,837 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserStatus {
+  ACTIVE
+  INVITED
+  DISABLED
+}
+
+enum ItemType {
+  RAW_MATERIAL
+  PURCHASED_COMPONENT
+  SUB_ASSEMBLY
+  FINISHED_GOODS
+  CONSUMABLE
+}
+
+enum SupplyType {
+  MAKE
+  BUY
+}
+
+enum RecordStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum BomStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  OBSOLETE
+}
+
+enum CostValuationStatus {
+  VALUED
+  UNVALUED
+  NOT_APPLICABLE
+}
+
+enum StockMovementType {
+  RECEIPT
+  ISSUE
+  TRANSFER_IN
+  TRANSFER_OUT
+  ADJUSTMENT
+  ADJUSTMENT_IN
+  ADJUSTMENT_OUT
+  BLOCK
+  UNBLOCK
+  PRODUCTION_RECEIPT
+  CONSUMPTION
+  RETURN
+}
+
+enum ReservationStatus {
+  ACTIVE
+  RELEASED
+  CONSUMED
+}
+
+enum PurchaseRequestStatus {
+  DRAFT
+  APPROVED
+  CANCELLED
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  APPROVED
+  PARTIALLY_RECEIVED
+  FULLY_RECEIVED
+  CANCELLED
+  CLOSED
+}
+
+enum GoodsReceiptStatus {
+  DRAFT
+  POSTED
+  CANCELLED
+}
+
+enum ProductionDemandStatus {
+  DRAFT
+  RELEASED
+  CANCELLED
+}
+
+enum MrpRunStatus {
+  COMPLETED
+  FAILED
+}
+
+enum ManufacturingOrderStatus {
+  DRAFT
+  PLANNED
+  RELEASED
+  IN_PROGRESS
+  QC_PENDING
+  COMPLETED
+  ON_HOLD
+  CANCELLED
+}
+
+enum WorkOrderStatus {
+  PENDING
+  IN_PROGRESS
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum QcInspectionStatus {
+  DRAFT
+  POSTED
+  CANCELLED
+}
+
+enum ManufacturingCostSnapshotType {
+  ESTIMATE
+  ACTUAL
+}
+
+model User {
+  id            String     @id @default(uuid()) @db.Uuid
+  name          String
+  email         String     @unique
+  emailVerified Boolean    @default(false)
+  image         String?
+  status        UserStatus @default(INVITED)
+  role          String     @default("user")
+  banned        Boolean    @default(false)
+  banReason     String?
+  banExpires    DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  userRoles     UserRole[]
+  auditLogs     AuditLog[]
+
+  @@index([status])
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(uuid()) @db.Uuid
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  impersonatedBy String?
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Account {
+  id                    String    @id @default(uuid()) @db.Uuid
+  accountId             String
+  providerId            String
+  userId                String    @db.Uuid
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Verification {
+  id         String   @id @default(uuid()) @db.Uuid
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verifications")
+}
+
+model Role {
+  id          String           @id @default(uuid()) @db.Uuid
+  code        String           @unique
+  name        String
+  description String?
+  userRoles   UserRole[]
+  permissions RolePermission[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model Permission {
+  id          String           @id @default(uuid()) @db.Uuid
+  code        String           @unique
+  description String?
+  roles       RolePermission[]
+  createdAt   DateTime         @default(now())
+}
+
+model UserRole {
+  userId     String   @db.Uuid
+  roleId     String   @db.Uuid
+  assignedAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@id([userId, roleId])
+  @@index([roleId])
+}
+
+model RolePermission {
+  roleId       String     @db.Uuid
+  permissionId String     @db.Uuid
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+}
+
+model PurchaseRequest {
+  id            String                @id @default(uuid()) @db.Uuid
+  number        String                @unique
+  supplierId    String?               @db.Uuid
+  status        PurchaseRequestStatus @default(DRAFT)
+  requestedById String                @db.Uuid
+  approvedById  String?               @db.Uuid
+  approvedAt    DateTime?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  supplier      Supplier?             @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  lines         PurchaseRequestLine[]
+}
+
+model PurchaseRequestLine {
+  id          String                      @id @default(uuid()) @db.Uuid
+  requestId   String                      @db.Uuid
+  itemId      String                      @db.Uuid
+  quantity    Decimal                     @db.Decimal(19, 6)
+  uomId       String                      @db.Uuid
+  neededBy    DateTime?
+  notes       String?
+  request     PurchaseRequest             @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  item        Item                        @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  uom         UnitOfMeasure               @relation(fields: [uomId], references: [id], onDelete: Restrict)
+  allocations PurchaseRequestAllocation[]
+
+  @@index([requestId])
+  @@index([itemId, neededBy])
+}
+
+model PurchaseOrder {
+  id               String                      @id @default(uuid()) @db.Uuid
+  number           String                      @unique
+  supplierId       String                      @db.Uuid
+  warehouseId      String?                     @db.Uuid
+  status           PurchaseOrderStatus         @default(DRAFT)
+  orderedAt        DateTime                    @default(now())
+  expectedDelivery DateTime?
+  approvedById     String?                     @db.Uuid
+  approvedAt       DateTime?
+  createdAt        DateTime                    @default(now())
+  updatedAt        DateTime                    @updatedAt
+  supplier         Supplier                    @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  lines            PurchaseOrderLine[]
+  receipts         GoodsReceipt[]
+  allocations      PurchaseRequestAllocation[]
+
+  @@index([supplierId, status])
+}
+
+model PurchaseOrderLine {
+  id           String                      @id @default(uuid()) @db.Uuid
+  orderId      String                      @db.Uuid
+  itemId       String                      @db.Uuid
+  sequence     Int
+  orderedQty   Decimal                     @db.Decimal(19, 6)
+  receivedQty  Decimal                     @default(0) @db.Decimal(19, 6)
+  unitCost     Decimal                     @db.Decimal(19, 4)
+  uomId        String                      @db.Uuid
+  order        PurchaseOrder               @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  item         Item                        @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  uom          UnitOfMeasure               @relation(fields: [uomId], references: [id], onDelete: Restrict)
+  receiptLines GoodsReceiptLine[]
+  allocations  PurchaseRequestAllocation[]
+
+  @@unique([orderId, sequence])
+  @@index([itemId])
+}
+
+model PurchaseRequestAllocation {
+  id            String              @id @default(uuid()) @db.Uuid
+  requestLineId String              @db.Uuid
+  orderId       String              @db.Uuid
+  orderLineId   String              @db.Uuid
+  quantity      Decimal             @db.Decimal(19, 6)
+  requestLine   PurchaseRequestLine @relation(fields: [requestLineId], references: [id], onDelete: Restrict)
+  order         PurchaseOrder       @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  orderLine     PurchaseOrderLine   @relation(fields: [orderLineId], references: [id], onDelete: Restrict)
+
+  @@unique([requestLineId, orderLineId])
+  @@index([orderId])
+}
+
+model GoodsReceipt {
+  id             String             @id @default(uuid()) @db.Uuid
+  number         String             @unique
+  orderId        String             @db.Uuid
+  warehouseId    String             @db.Uuid
+  status         GoodsReceiptStatus @default(DRAFT)
+  idempotencyKey String             @unique
+  receivedAt     DateTime           @default(now())
+  postedAt       DateTime?
+  actorId        String             @db.Uuid
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  order          PurchaseOrder      @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  warehouse      Warehouse          @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  lines          GoodsReceiptLine[]
+
+  @@index([orderId, status])
+}
+
+model GoodsReceiptLine {
+  id          String            @id @default(uuid()) @db.Uuid
+  receiptId   String            @db.Uuid
+  orderLineId String            @db.Uuid
+  sequence    Int
+  quantity    Decimal           @db.Decimal(19, 6)
+  unitCost    Decimal           @db.Decimal(19, 4)
+  receipt     GoodsReceipt      @relation(fields: [receiptId], references: [id], onDelete: Restrict)
+  orderLine   PurchaseOrderLine @relation(fields: [orderLineId], references: [id], onDelete: Restrict)
+
+  @@unique([receiptId, sequence])
+  @@index([orderLineId])
+}
+
+model ProductionDemand {
+  id            String                 @id @default(uuid()) @db.Uuid
+  number        String                 @unique
+  status        ProductionDemandStatus @default(DRAFT)
+  requestedById String                 @db.Uuid
+  requiredDate  DateTime?
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  lines         ProductionDemandLine[]
+}
+
+model ProductionDemandLine {
+  id                    String                    @id @default(uuid()) @db.Uuid
+  demandId              String                    @db.Uuid
+  itemId                String                    @db.Uuid
+  quantity              Decimal                   @db.Decimal(19, 6)
+  requiredDate          DateTime
+  demand                ProductionDemand          @relation(fields: [demandId], references: [id], onDelete: Restrict)
+  item                  Item                      @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  recommendationSources MrpRecommendationSource[]
+
+  @@index([itemId, requiredDate])
+  @@index([demandId])
+}
+
+model MrpRun {
+  id              String              @id @default(uuid()) @db.Uuid
+  runNumber       String              @unique
+  status          MrpRunStatus        @default(COMPLETED)
+  asOfDate        DateTime
+  inputSnapshot   Json
+  createdById     String              @db.Uuid
+  createdAt       DateTime            @default(now())
+  buckets         MrpBucket[]
+  recommendations MrpRecommendation[]
+
+  @@index([asOfDate, createdAt])
+}
+
+model MrpBucket {
+  id                 String              @id @default(uuid()) @db.Uuid
+  runId              String              @db.Uuid
+  itemId             String              @db.Uuid
+  bucketDate         DateTime
+  grossRequirements  Decimal             @db.Decimal(19, 6)
+  scheduledReceipts  Decimal             @db.Decimal(19, 6)
+  projectedAvailable Decimal             @db.Decimal(19, 6)
+  netRequirements    Decimal             @db.Decimal(19, 6)
+  run                MrpRun              @relation(fields: [runId], references: [id], onDelete: Restrict)
+  item               Item                @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  mrpRecommendations MrpRecommendation[]
+
+  @@unique([runId, itemId, bucketDate])
+  @@index([itemId, bucketDate])
+}
+
+model MrpRecommendation {
+  id                  String                    @id @default(uuid()) @db.Uuid
+  runId               String                    @db.Uuid
+  bucketId            String?                   @db.Uuid
+  itemId              String                    @db.Uuid
+  supplyType          SupplyType
+  quantity            Decimal                   @db.Decimal(19, 6)
+  requiredDate        DateTime
+  plannedReleaseDate  DateTime
+  late                Boolean
+  run                 MrpRun                    @relation(fields: [runId], references: [id], onDelete: Restrict)
+  bucket              MrpBucket?                @relation(fields: [bucketId], references: [id], onDelete: SetNull)
+  item                Item                      @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  sources             MrpRecommendationSource[]
+  manufacturingOrders ManufacturingOrder[]
+
+  @@index([runId, itemId, requiredDate])
+}
+
+model MrpRecommendationSource {
+  id               String               @id @default(uuid()) @db.Uuid
+  recommendationId String               @db.Uuid
+  demandLineId     String               @db.Uuid
+  recommendation   MrpRecommendation    @relation(fields: [recommendationId], references: [id], onDelete: Restrict)
+  demandLine       ProductionDemandLine @relation(fields: [demandLineId], references: [id], onDelete: Restrict)
+
+  @@unique([recommendationId, demandLineId])
+}
+
+model ManufacturingOrder {
+  id                     String                       @id @default(uuid()) @db.Uuid
+  number                 String                       @unique
+  itemId                 String                       @db.Uuid
+  quantity               Decimal                      @db.Decimal(19, 6)
+  warehouseId            String                       @db.Uuid
+  wipWarehouseId         String                       @db.Uuid
+  status                 ManufacturingOrderStatus     @default(DRAFT)
+  sourceRecommendationId String?                      @db.Uuid
+  bomId                  String?                      @db.Uuid
+  bomSnapshot            Json
+  routingSnapshot        Json?
+  plannedStart           DateTime?
+  plannedEnd             DateTime?
+  actualStart            DateTime?
+  actualEnd              DateTime?
+  completedQuantity      Decimal                      @default(0) @db.Decimal(19, 6)
+  producedQuantity       Decimal                      @default(0) @db.Decimal(19, 6)
+  inspectedQuantity      Decimal                      @default(0) @db.Decimal(19, 6)
+  acceptedQuantity       Decimal                      @default(0) @db.Decimal(19, 6)
+  rejectedQuantity       Decimal                      @default(0) @db.Decimal(19, 6)
+  reworkQuantity         Decimal                      @default(0) @db.Decimal(19, 6)
+  responsibleUserId      String?                      @db.Uuid
+  createdById            String                       @db.Uuid
+  releasedById           String?                      @db.Uuid
+  releasedAt             DateTime?
+  createdAt              DateTime                     @default(now())
+  updatedAt              DateTime                     @updatedAt
+  item                   Item                         @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  warehouse              Warehouse                    @relation("MoSourceWarehouse", fields: [warehouseId], references: [id], onDelete: Restrict)
+  wipWarehouse           Warehouse                    @relation("MoWipWarehouse", fields: [wipWarehouseId], references: [id], onDelete: Restrict)
+  sourceRecommendation   MrpRecommendation?           @relation(fields: [sourceRecommendationId], references: [id], onDelete: SetNull)
+  materials              ManufacturingOrderMaterial[]
+  workOrders             WorkOrder[]
+  qcInspections          QcInspection[]
+  productionReceipts     ProductionReceipt[]
+  costSnapshots          ManufacturingCostSnapshot[]
+
+  @@index([itemId, status])
+  @@index([sourceRecommendationId])
+}
+
+model ManufacturingOrderMaterial {
+  id                   String             @id @default(uuid()) @db.Uuid
+  manufacturingOrderId String             @db.Uuid
+  itemId               String             @db.Uuid
+  plannedQty           Decimal            @db.Decimal(19, 6)
+  issuedQty            Decimal            @default(0) @db.Decimal(19, 6)
+  consumedQty          Decimal            @default(0) @db.Decimal(19, 6)
+  returnedQty          Decimal            @default(0) @db.Decimal(19, 6)
+  reservationId        String?            @unique @db.Uuid
+  uomCode              String
+  sequence             Int
+  manufacturingOrder   ManufacturingOrder @relation(fields: [manufacturingOrderId], references: [id], onDelete: Restrict)
+  reservation          StockReservation?  @relation(fields: [reservationId], references: [id], onDelete: SetNull)
+  item                 Item               @relation(fields: [itemId], references: [id], onDelete: Restrict)
+
+  @@unique([manufacturingOrderId, sequence])
+  @@index([itemId])
+}
+
+model WorkCenter {
+  id              String       @id @default(uuid()) @db.Uuid
+  code            String       @unique
+  name            String
+  hourlyRate      Decimal      @default(0) @db.Decimal(19, 4)
+  standardMinutes Decimal      @default(0) @db.Decimal(19, 4)
+  status          RecordStatus @default(ACTIVE)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  workOrders      WorkOrder[]
+}
+
+model WorkOrder {
+  id                   String               @id @default(uuid()) @db.Uuid
+  manufacturingOrderId String               @db.Uuid
+  number               String               @unique
+  sequence             Int
+  operationCode        String
+  workCenterCode       String?
+  workCenterId         String?              @db.Uuid
+  standardMinutes      Decimal              @default(0) @db.Decimal(19, 4)
+  targetQuantity       Decimal              @db.Decimal(19, 6)
+  completedQty         Decimal              @default(0) @db.Decimal(19, 6)
+  rejectedQty          Decimal              @default(0) @db.Decimal(19, 6)
+  status               WorkOrderStatus      @default(PENDING)
+  startedAt            DateTime?
+  completedAt          DateTime?
+  manufacturingOrder   ManufacturingOrder   @relation(fields: [manufacturingOrderId], references: [id], onDelete: Restrict)
+  qcInspections        QcInspection[]
+  workCenter           WorkCenter?          @relation(fields: [workCenterId], references: [id], onDelete: Restrict)
+  timeEntries          WorkOrderTimeEntry[]
+
+  @@unique([manufacturingOrderId, sequence])
+  @@index([status])
+}
+
+model WorkOrderTimeEntry {
+  id             String    @id @default(uuid()) @db.Uuid
+  workOrderId    String    @db.Uuid
+  idempotencyKey String    @unique
+  minutes        Decimal   @db.Decimal(19, 4)
+  hourlyRate     Decimal   @db.Decimal(19, 4)
+  actorId        String    @db.Uuid
+  createdAt      DateTime  @default(now())
+  workOrder      WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Restrict)
+
+  @@index([workOrderId, createdAt])
+}
+
+model QcInspection {
+  id                   String              @id @default(uuid()) @db.Uuid
+  number               String              @unique
+  manufacturingOrderId String              @db.Uuid
+  workOrderId          String?             @db.Uuid
+  defectCode           String?
+  status               QcInspectionStatus  @default(DRAFT)
+  inspectedQty         Decimal             @db.Decimal(19, 6)
+  acceptedQty          Decimal             @db.Decimal(19, 6)
+  rejectedQty          Decimal             @db.Decimal(19, 6)
+  reworkQty            Decimal             @db.Decimal(19, 6)
+  inspectorId          String              @db.Uuid
+  notes                String?
+  inspectedAt          DateTime            @default(now())
+  postedAt             DateTime?
+  manufacturingOrder   ManufacturingOrder  @relation(fields: [manufacturingOrderId], references: [id], onDelete: Restrict)
+  workOrder            WorkOrder?          @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
+  productionReceipts   ProductionReceipt[]
+
+  @@index([manufacturingOrderId, status])
+}
+
+model ProductionReceipt {
+  id                   String             @id @default(uuid()) @db.Uuid
+  number               String             @unique
+  manufacturingOrderId String             @db.Uuid
+  warehouseId          String             @db.Uuid
+  acceptedQty          Decimal            @db.Decimal(19, 6)
+  inspectionId         String?            @db.Uuid
+  idempotencyKey       String             @unique
+  status               GoodsReceiptStatus @default(DRAFT)
+  actorId              String             @db.Uuid
+  postedAt             DateTime?
+  createdAt            DateTime           @default(now())
+  manufacturingOrder   ManufacturingOrder @relation(fields: [manufacturingOrderId], references: [id], onDelete: Restrict)
+  warehouse            Warehouse          @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  inspection           QcInspection?      @relation(fields: [inspectionId], references: [id], onDelete: Restrict)
+
+  @@index([manufacturingOrderId, status])
+}
+
+model ManufacturingCostSnapshot {
+  id                   String                        @id @default(uuid()) @db.Uuid
+  manufacturingOrderId String                        @db.Uuid
+  type                 ManufacturingCostSnapshotType
+  materialCost         Decimal                       @db.Decimal(19, 4)
+  laborCost            Decimal                       @db.Decimal(19, 4)
+  overheadCost         Decimal                       @db.Decimal(19, 4)
+  totalCost            Decimal                       @db.Decimal(19, 4)
+  wipCost              Decimal                       @db.Decimal(19, 4)
+  completedCost        Decimal                       @db.Decimal(19, 4)
+  costPerAcceptedUnit  Decimal?                      @db.Decimal(19, 4)
+  valuationComplete    Boolean
+  unvaluedReferences   Json
+  inputSnapshot        Json
+  createdById          String                        @db.Uuid
+  createdAt            DateTime                      @default(now())
+  manufacturingOrder   ManufacturingOrder            @relation(fields: [manufacturingOrderId], references: [id], onDelete: Restrict)
+
+  @@index([manufacturingOrderId, type, createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String?  @db.Uuid
+  action     String
+  entityType String
+  entityId   String?
+  source     String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([actorId, createdAt])
+  @@map("audit_logs")
+}
+
+model ItemCategory {
+  id        String       @id @default(uuid()) @db.Uuid
+  code      String       @unique
+  name      String
+  status    RecordStatus @default(ACTIVE)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  items     Item[]
+}
+
+model UnitOfMeasure {
+  id                   String                @id @default(uuid()) @db.Uuid
+  code                 String                @unique
+  name                 String
+  dimension            String
+  precision            Int                   @default(3)
+  status               RecordStatus          @default(ACTIVE)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  baseItems            Item[]
+  bomLines             BomLine[]
+  purchaseRequestLines PurchaseRequestLine[]
+  purchaseOrderLines   PurchaseOrderLine[]
+  conversionsFrom      UomConversion[]       @relation("ConversionFrom")
+  conversionsTo        UomConversion[]       @relation("ConversionTo")
+}
+
+model UomConversion {
+  id        String        @id @default(uuid()) @db.Uuid
+  fromUomId String        @db.Uuid
+  toUomId   String        @db.Uuid
+  factor    Decimal       @db.Decimal(24, 12)
+  fromUom   UnitOfMeasure @relation("ConversionFrom", fields: [fromUomId], references: [id], onDelete: Restrict)
+  toUom     UnitOfMeasure @relation("ConversionTo", fields: [toUomId], references: [id], onDelete: Restrict)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@unique([fromUomId, toUomId])
+  @@index([toUomId])
+}
+
+model Supplier {
+  id             String            @id @default(uuid()) @db.Uuid
+  code           String            @unique
+  name           String
+  email          String?
+  phone          String?
+  address        String?
+  status         RecordStatus      @default(ACTIVE)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  purchaseOrders PurchaseOrder[]
+  requests       PurchaseRequest[]
+}
+
+model Warehouse {
+  id                     String               @id @default(uuid()) @db.Uuid
+  code                   String               @unique
+  name                   String
+  description            String?
+  isWip                  Boolean              @default(false)
+  status                 RecordStatus         @default(ACTIVE)
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  balances               StockBalance[]
+  movements              StockMovement[]
+  reservations           StockReservation[]
+  receipts               GoodsReceipt[]
+  manufacturingOrders    ManufacturingOrder[] @relation("MoSourceWarehouse")
+  wipManufacturingOrders ManufacturingOrder[] @relation("MoWipWarehouse")
+  productionReceipts     ProductionReceipt[]
+}
+
+model Item {
+  id                     String                       @id @default(uuid()) @db.Uuid
+  sku                    String                       @unique
+  name                   String
+  description            String?
+  categoryId             String                       @db.Uuid
+  itemType               ItemType
+  supplyType             SupplyType
+  baseUomId              String                       @db.Uuid
+  standardMaterialCost   Decimal?                     @db.Decimal(19, 4)
+  reorderPoint           Decimal                      @default(0) @db.Decimal(19, 6)
+  safetyStock            Decimal                      @default(0) @db.Decimal(19, 6)
+  purchasingLeadDays     Int                          @default(0)
+  minimumOrderQty        Decimal                      @default(0) @db.Decimal(19, 6)
+  lotSizeMultiple        Decimal                      @default(0) @db.Decimal(19, 6)
+  status                 RecordStatus                 @default(ACTIVE)
+  category               ItemCategory                 @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  baseUom                UnitOfMeasure                @relation(fields: [baseUomId], references: [id], onDelete: Restrict)
+  bomOutputs             Bom[]                        @relation("BomOutput")
+  bomComponents          BomLine[]
+  stockBalances          StockBalance[]
+  stockMovements         StockMovement[]
+  reservations           StockReservation[]
+  purchaseRequestLines   PurchaseRequestLine[]
+  purchaseOrderLines     PurchaseOrderLine[]
+  productionDemandLines  ProductionDemandLine[]
+  mrpBuckets             MrpBucket[]
+  mrpRecommendations     MrpRecommendation[]
+  manufacturingOrders    ManufacturingOrder[]
+  manufacturingMaterials ManufacturingOrderMaterial[]
+  createdAt              DateTime                     @default(now())
+  updatedAt              DateTime                     @updatedAt
+
+  @@index([name])
+  @@index([categoryId, status])
+}
+
+model Bom {
+  id            String    @id @default(uuid()) @db.Uuid
+  number        String    @unique
+  outputItemId  String    @db.Uuid
+  revision      String
+  outputQty     Decimal   @db.Decimal(19, 6)
+  status        BomStatus @default(DRAFT)
+  effectiveDate DateTime?
+  createdById   String?   @db.Uuid
+  approvedById  String?   @db.Uuid
+  approvedAt    DateTime?
+  outputItem    Item      @relation("BomOutput", fields: [outputItemId], references: [id], onDelete: Restrict)
+  lines         BomLine[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([outputItemId, revision])
+  @@index([outputItemId, status, effectiveDate])
+}
+
+model BomLine {
+  id          String        @id @default(uuid()) @db.Uuid
+  bomId       String        @db.Uuid
+  componentId String        @db.Uuid
+  quantity    Decimal       @db.Decimal(19, 6)
+  uomId       String        @db.Uuid
+  scrapRate   Decimal       @default(0) @db.Decimal(9, 6)
+  sequence    Int
+  notes       String?
+  bom         Bom           @relation(fields: [bomId], references: [id], onDelete: Cascade)
+  component   Item          @relation(fields: [componentId], references: [id], onDelete: Restrict)
+  uom         UnitOfMeasure @relation(fields: [uomId], references: [id], onDelete: Restrict)
+
+  @@unique([bomId, sequence])
+  @@index([componentId])
+}
+
+model StockBalance {
+  id                String    @id @default(uuid()) @db.Uuid
+  itemId            String    @db.Uuid
+  warehouseId       String    @db.Uuid
+  onHand            Decimal   @default(0) @db.Decimal(19, 6)
+  reserved          Decimal   @default(0) @db.Decimal(19, 6)
+  blocked           Decimal   @default(0) @db.Decimal(19, 6)
+  onHandValue       Decimal   @default(0) @db.Decimal(19, 4)
+  averageUnitCost   Decimal?  @db.Decimal(19, 4)
+  valuationComplete Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  item              Item      @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  warehouse         Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+
+  @@unique([itemId, warehouseId])
+  @@index([warehouseId, itemId])
+}
+
+model StockMovement {
+  id             String              @id @default(uuid()) @db.Uuid
+  idempotencyKey String              @unique
+  sourceType     String
+  sourceId       String
+  itemId         String              @db.Uuid
+  warehouseId    String              @db.Uuid
+  movementType   StockMovementType
+  quantity       Decimal             @db.Decimal(19, 6)
+  unitCost       Decimal?            @db.Decimal(19, 4)
+  costStatus     CostValuationStatus @default(UNVALUED)
+  actorId        String              @db.Uuid
+  postedAt       DateTime            @default(now())
+  createdAt      DateTime            @default(now())
+  item           Item                @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  warehouse      Warehouse           @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+
+  @@index([itemId, warehouseId, postedAt])
+  @@index([sourceType, sourceId])
+}
+
+model StockReservation {
+  id                    String                      @id @default(uuid()) @db.Uuid
+  idempotencyKey        String                      @unique
+  sourceType            String
+  sourceId              String
+  itemId                String                      @db.Uuid
+  warehouseId           String                      @db.Uuid
+  quantity              Decimal                     @db.Decimal(19, 6)
+  consumedQty           Decimal                     @default(0) @db.Decimal(19, 6)
+  status                ReservationStatus           @default(ACTIVE)
+  actorId               String                      @db.Uuid
+  createdAt             DateTime                    @default(now())
+  updatedAt             DateTime                    @updatedAt
+  item                  Item                        @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  warehouse             Warehouse                   @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  manufacturingMaterial ManufacturingOrderMaterial?
+
+  @@index([itemId, warehouseId, status])
+  @@index([sourceType, sourceId])
+}

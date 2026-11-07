@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: manufactureos
+      POSTGRES_PASSWORD: manufactureos
+      POSTGRES_DB: manufactureos
+    ports:
+      - "5433:5432"
+    volumes:
+      - manufactureos-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U manufactureos -d manufactureos"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  manufactureos-postgres:

@@ -1,0 +1,52 @@
+{
+  "name": "manufacture-os",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build --turbopack",
+    "start": "next start",
+    "lint": "eslint",
+    "postinstall": "prisma generate",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:seed": "prisma db seed"
+  },
+  "dependencies": {
+    "@better-auth/prisma-adapter": "1.7.17",
+    "@neondatabase/serverless": "1.0.2",
+    "@prisma/adapter-neon": "7.0.0",
+    "@prisma/adapter-pg": "7.0.0",
+    "@prisma/client": "7.0.0",
+    "better-auth": "^1.7.17",
+    "decimal.js": "10.6.0",
+    "dotenv": "16.6.1",
+    "next": "15.5.9",
+    "pg": "8.16.3",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "server-only": "0.0.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.64.1",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^24.10.0",
+    "@types/pg": "8.15.5",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.9",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.10",
+    "prisma": "7.0.0",
+    "tailwindcss": "^4",
+    "tsx": "4.20.6",
+    "typescript": "^5",
+    "vitest": "^5.1.0"
+  }
+}
