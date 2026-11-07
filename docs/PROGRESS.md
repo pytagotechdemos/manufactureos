@@ -1,36 +1,33 @@
 # Progress
 
 ## Current phase
-Phase 6 — Quality, Costing & Reports (in progress)
+Phase 7 — Deployment & end-to-end verification (in progress)
 
 ## Completed
 
 ### Foundation
-- Confirmed initial `C:\bom` workspace was empty; Node 24.11.1 and pnpm 10.12.4 available.
-- Scaffolded Next.js App Router with TypeScript, Tailwind, ESLint, and `src` layout.
-- Added Prisma 7, Neon adapter, local PostgreSQL adapter, Better Auth Prisma adapter, Zod, Vitest, Playwright, Prettier, dotenv, and lockfile.
+- Next.js App Router + TypeScript strict, Tailwind, ESLint, Vitest, Playwright, Docker Compose PostgreSQL.
+- Prisma 7 with driver adapters (`PrismaPg` for localhost, `PrismaNeon` otherwise) selected at runtime in `src/lib/prisma.ts`.
+- `prisma.config.ts` routes migrations through `DATABASE_URL_UNPOOLED`.
 
 ### Authentication & Authorization (Phase 1)
-- Closed email/password auth via Better Auth Prisma adapter; public signup disabled.
-- Better Auth route handler at `/api/v1/auth/[...all]`.
-- Login UI at `/login`; protected overview shell at `/overview`.
-- Server-side active-user session check and permission lookup via `src/lib/auth-session.ts` and `src/lib/authorize.ts`.
-- Role/permission seed implementation (8 roles, granular permissions).
+- Closed email/password auth via Better Auth; public signup disabled (`disableSignUp: true`).
+- Better Auth route handler at `/api/auth/[...all]`; login UI at `/login`.
+- Admin plugin: `role`, `banned`, `banReason`, `banExpires` on `users`; `impersonatedBy` on `sessions`.
+- Server-side session and permission checks in `src/lib/auth-session.ts` and `src/lib/authorize.ts`.
+- Role/permission seed (8 roles, granular permissions) in `prisma/seed-access-control.ts`.
 - PostgreSQL trigger migration enforcing approved BOM immutability at the database level.
+- **Implemented:** `advanced.database.generateId: "uuid"` in `src/lib/auth.ts` so Better Auth ids match `@db.Uuid` columns (default id generator emits 32-char base64url strings that Postgres rejects).
 
 ### Master Data & BOM (Phase 2)
-- Item Master, UOM conversion, BOM lifecycle (Draft/In Review/Approved/Obsolete), audit entities in schema.
-- Pure BOM explosion service using Decimal: output batch normalization, nested MAKE explosion, BUY leaf requirements, scrap, shared requirement aggregation, missing/ambiguous child BOM errors, cycle detection.
-- Validated transactional BOM lifecycle service: draft create/edit, review submission, approval, obsolescence.
-- Pure BOM explosion unit tests (8 cases).
-- PostgreSQL trigger enforcing approved BOM immutability at the database level.
+- Item master, UOM conversion, BOM lifecycle (Draft/In Review/Approved/Obsolete), audit entities.
+- Pure BOM explosion service (Decimal): batch normalization, nested MAKE explosion, BUY leaf requirements, scrap, shared aggregation, cycle detection, missing/ambiguous BOM errors.
+- Transactional BOM lifecycle service: draft create/edit, review submission, approval, obsolescence.
 
 ### Inventory Foundation (Phase 3)
 - Stock ledger, balances, reservations, transfers, adjustments, immutable movement ledger.
-- Stock availability = On Hand - Reserved - Blocked.
-- Atomic posting with idempotency keys, concurrency-safe conditional updates, reversal/adjustment support.
-- WIP transfer distinct from consumption.
-- Stock balance, reservation, issue, transfer, adjustment APIs.
+- Availability = On Hand − Reserved − Blocked.
+- Atomic posting with idempotency keys, concurrency-safe conditional updates, reversal/adjustment support; WIP transfer distinct from consumption.
 
 ### Procurement & MRP (Phase 4)
 - Production demand, purchase requests/lines, purchase orders/lines, goods receipts/lines.
@@ -38,58 +35,53 @@ Phase 6 — Quality, Costing & Reports (in progress)
 - Partial goods receipts, over-receipt prevention, cancellation protection.
 
 ### Manufacturing Execution (Phase 5)
-- MO with BOM/routing snapshots, Draft→Planned→Released→In Progress→QC Pending→Completed lifecycle.
-- Work orders with start/pause/complete, actual time entries, material reservation/issue/consumption.
-- Partial production output support.
-- PostgreSQL integration verified against disposable database.
+- MO with BOM/routing snapshots and lifecycle Draft → Planned → Released → In Progress → QC Pending → Completed.
+- Work orders with start/pause/complete, time entries, material reservation/issue/consumption, partial output.
 
-### Quality Control (Phase 6 - in progress)
-- QC inspection record with accepted/rejected/rework reconciliation (inspected = accepted + rejected + rework).
-- Post accepted production to finished goods stock; rejected goods blocked from sellable inventory.
-- Rework tracked separately, not counted as new production output.
-- QC inspection API with validation and audit events.
+### Quality Control & Costing (Phase 6)
+- QC inspection with accepted/rejected/rework reconciliation; accepted output posted to FG stock; rejected output blocked.
+- Estimated cost (BOM material × standard cost + routing labor × work-center rate + overhead) and actual cost (consumption at valuation cost, recorded labor, overhead, WIP capitalization).
+- Moving weighted-average inventory valuation policy.
 
-### Costing (Phase 6 - in progress)
-- Estimated cost: BOM material quantity × standard cost + routing standard labor × work center rate + overhead.
-- Actual cost: actual material consumption at valuation cost, recorded labor, overhead; WIP capitalized; accepted-unit cost excludes WIP cost.
-- Moving weighted-average inventory valuation policy documented.
+### User interface
+- Screens: `/overview`, `/login`, `/items`, `/engineering`, `/boms/create`, `/planning`, `/inventory`, `/procurement`, `/manufacturing`, `/manufacturing/work-orders`, `/manufacturing/receipts`, `/quality`, `/reports`, `/administration`.
+- Sidebar navigation includes Items; screens call the `/api/v1/**` endpoints.
 
-### Latest checks
+### Data & operations
+- Deterministic seed `prisma/seed.ts`: 5 items, 2 approved BOMs, UOMs, categories, supplier, 2 warehouses, 3 work centers, stock balances. BOM lines are inserted while the BOM is `DRAFT` and the BOM is approved afterwards, because the immutability trigger rejects `INSERT` into `BomLine` for approved parents.
+- `scripts/create-admin.ts` provisions the first administrator (registration is closed).
+
+### Verification (latest run)
 - Typecheck: passed
-- Lint: passed
-- Tests: 47 passed (unit + integration)
-- Production build: passed
-- Prisma migration status: database is up to date (17 migrations applied)
-- Local PostgreSQL running on port 5433 (Docker Compose)
-- Temporary disposable PostgreSQL on port 5434 used for integration testing; container removed after testing.
+- Lint: passed (0 errors; 8 unused-variable warnings in `prisma/seed.ts`)
+- Tests: 47 passed, 10 skipped
+- Production build: passed (42 routes)
 
-## Not completed
-- RBAC seed row counts not yet verified against database; no active login account provisioned; sign-in/closed-signup not tested end-to-end.
-- Item master UI (create/edit items) not implemented.
-- BOM draft creation/edit UI not implemented (only read/explosion UI).
-- Procurement UI (purchase request/order screens, goods receipt UI) not implemented.
-- Manufacturing Orders UI (create/release MO, work order execution screen) not implemented.
-- Quality Control UI just added - login required, permission check implemented, but form not yet connected to API.
-- Inventory UI (stock balances, receipts, issues) just added - API endpoints exist but UI not connected.
-- Reporting dashboard (costing, inventory valuation, production variance) not implemented.
-- No Neon cloud connection tested; no credentials provided.
-- No E2E Playwright tests written.
-- No reproducible seed data for demo furniture manufacturing scenario.
-- Deterministic seed script not yet written.
+### Deployment (implemented)
+- PostgreSQL: Neon, 20 migrations applied with `prisma migrate deploy`, seed data loaded, admin user provisioned.
+- GitHub: public repository `pytagotechdemos/manufactureos` (`.env*` ignored; only `.env.example` committed).
+- Vercel: project `manufactureos` linked to the GitHub repository (push-to-deploy), env vars `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` set for production and preview.
+- Production URL: `https://manufactureos-six.vercel.app` — serves the app and redirects `/` to `/login`.
+
+## Not implemented / not verified
+- Sign-in end-to-end against production returned HTTP 500 before the UUID id fix; needs re-verification after the fix deploys.
+- E2E Playwright test (`tests/e2e/complete-lifecycle.e2e.ts`) written but never executed.
+- RBAC seed row counts not verified against the database.
+- Some screens are read/list views: item master create/edit, BOM draft editing UI, purchase order/goods receipt forms, MO creation from MRP, work-order execution, QC form-to-API wiring, inventory receipt/issue forms.
+- Reporting dashboard beyond the current `/reports` screen (costing, inventory valuation, production variance) not implemented.
+- Custom domain, preview-deployment protection rules, and CI pipeline not configured.
 
 ## Risks and blockers
-- Local Compose PostgreSQL on port 5433 because host port 5432 was allocated; volume is `bom_manufactureos-postgres`.
-- Domain explosion accepts caller-provided BOM catalog; repository must select only approved/effective revisions before planning or MO release.
-- Dedicated UOM conversion administration service needed to guarantee stored conversion records remain dimension-compatible.
-- Better Auth adapter schema (role, banned, banReason, banExpires on User; impersonatedBy on Session) added to Prisma schema but migration must be applied to local DB.
+- Local Compose PostgreSQL on port 5433 because host port 5432 was allocated; volume `bom_manufactureos-postgres`.
+- `src/lib/prisma.ts` selects the Neon adapter unless the connection string contains `localhost`/`127.0.0.1`.
+- BOM explosion accepts a caller-provided BOM catalog; repositories must select only approved/effective revisions before planning or MO release.
+- Dedicated UOM conversion administration service needed to keep stored conversions dimension-compatible.
+- Global git credential settings on this machine prompt for a different GitHub identity; pushes use an explicit token URL.
 
 ## Next slice
-1. Verify local Compose database is running and all 17 migrations applied.
-2. Implement master data UI (item master CRUD) and BOM editor UI.
-2. Implement Quality Control UI (inspection list, create inspection, post inspection, accepted production receipt).
-3. Implement Manufacturing Orders UI (list, create from MRP recommendation, release, material issue).
-4. Implement inventory UI (stock balances, goods receipt, material issue).
-5. Run end-to-end workflow test: demand → MRP → PO → receipt → MO → issue → work order → QC → accepted receipt → stock/cost reconciliation.
-6. Implement production costing reports and inventory valuation reports.
-7. Run Playwright E2E tests.
-8. Deploy documentation and deployment guide.
+1. Re-verify sign-in and a protected page on production after the UUID id fix.
+2. Run the Playwright E2E lifecycle test against the deployed app.
+3. Verify RBAC seed row counts and audit logging against the Neon database.
+4. Complete the remaining CRUD forms (items, BOM draft editing, procurement, MO/work order, QC, inventory).
+5. Add production costing and inventory valuation reporting.
+6. Add CI (typecheck/lint/test/build) and a deployment guide.
