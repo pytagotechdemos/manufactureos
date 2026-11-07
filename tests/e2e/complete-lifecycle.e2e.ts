@@ -5,12 +5,13 @@ test.describe("Complete manufacturing lifecycle", () => {
     // Note: This E2E test requires the dev server and database to be running
     // with seed data loaded. It validates the UI flows end-to-end.
 
-    // 1. Login
+    // 1. Login (credentials supplied through the E2E environment; signup is closed)
     await page.goto("/login");
-    await page.fill('input[type="email"]', "admin@manufactureos.local");
-    await page.fill('input[type="password"]', "admin123");
+    await page.fill('input[type="email"]', process.env.E2E_EMAIL ?? "admin@manufactureos.local");
+    await page.fill('input[type="password"]', process.env.E2E_PASSWORD ?? "");
     await page.click('button[type="submit"]');
-    await expect(page).toHaveURL("/overview");
+    // First hit compiles the auth route on the fly; allow a warm-up margin.
+    await expect(page).toHaveURL("/overview", { timeout: 30_000 });
 
     // 2. Navigate to Item Master and verify seed items exist
     await page.click('nav a:has-text("Items")');

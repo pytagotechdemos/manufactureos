@@ -11,6 +11,7 @@ import "dotenv/config";
 import { randomUUID } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
 import { prisma } from "../src/lib/prisma";
+import { seedAccessControl } from "../prisma/seed-access-control";
 
 async function main() {
   const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
@@ -60,7 +61,17 @@ async function main() {
     });
   }
 
-  console.log(`✅ Admin ready: ${email} (role=${user.role}, status=${user.status})`);
+  // Grant every permission: the application authorizes through role
+  // permissions, not through the `role` column on `users`.
+  await seedAccessControl(prisma);
+  const superAdmin = await prisma.role.findUniqueOrThrow({ where: { code: "SUPER_ADMIN" } });
+  await prisma.userRole.upsert({
+    where: { userId_roleId: { userId: user.id, roleId: superAdmin.id } },
+    update: {},
+    create: { userId: user.id, roleId: superAdmin.id },
+  });
+
+  console.log(`✅ Admin ready: ${email} (role=${user.role}, status=${user.status}, permissionRole=SUPER_ADMIN)`);
 }
 
 main()

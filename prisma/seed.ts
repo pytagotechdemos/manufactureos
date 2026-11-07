@@ -22,6 +22,9 @@ import { seedAccessControl } from "./seed-access-control";
 const D = (value: string | number) => new Prisma.Decimal(new Decimal(value).toString());
 
 async function main() {
+  // Roles and permissions must exist before any permission check runs.
+  await seedAccessControl(prisma);
+
   await prisma.$transaction(async (tx) => {
     // ── 1. Admin user (needed for createdById / responsibleUserId refs) ─────
     const adminUser = await tx.user.upsert({

@@ -38,6 +38,13 @@ export async function seedAccessControl(prisma: PrismaClient) {
       await transaction.permission.upsert({ where: { code }, update: {}, create: { code } });
     }
 
+    const permissionIds = new Map(
+      (await transaction.permission.findMany({ select: { id: true, code: true } })).map((permission) => [
+        permission.code,
+        permission.id,
+      ]),
+    );
+
     for (const definition of roleDefinitions) {
       const role = await transaction.role.upsert({
         where: { code: definition.code },
@@ -46,17 +53,17 @@ export async function seedAccessControl(prisma: PrismaClient) {
       });
 
       for (const permissionCode of definition.permissions) {
-        const permission = await transaction.permission.findUniqueOrThrow({
-          where: { code: permissionCode },
-          select: { id: true },
-        });
+        const permissionId = permissionIds.get(permissionCode);
+        if (!permissionId) {
+          throw new Error(`Unknown permission code: ${permissionCode}`);
+        }
 
         await transaction.rolePermission.upsert({
-          where: { roleId_permissionId: { roleId: role.id, permissionId: permission.id } },
+          where: { roleId_permissionId: { roleId: role.id, permissionId } },
           update: {},
-          create: { roleId: role.id, permissionId: permission.id },
+          create: { roleId: role.id, permissionId },
         });
       }
     }
-  });
+  }, { timeout: 60_000, maxWait: 10_000 });
 }
