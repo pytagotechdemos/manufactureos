@@ -7,7 +7,9 @@ import { Stat, StatGrid } from "@/components/ui/stat";
 import { Table, TableBody, TableHead, Td, Th, Tr } from "@/components/ui/table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SearchInput } from "@/components/ui/form";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { formatDate } from "@/lib/format";
 
 export const metadata: Metadata = {
   title: "Overview",
@@ -47,15 +49,13 @@ export default async function OverviewPage() {
       <div className="grid gap-5 lg:grid-cols-2">
         <Card className="lg:col-span-2">
           <CardHeader
-            actions={
-              <div className="flex items-end gap-2">
-                <SearchInput value="" onChange={() => {}} placeholder="Search items…" />
-                <Button variant="primary" size="sm">Create item</Button>
-              </div>
-            }
             description="Recently added item master records."
             title="Item Master"
           />
+          <div className="flex items-end gap-2 p-4">
+            <SearchInput value="" onChange={() => {}} placeholder="Search items…" />
+            <Button variant="primary" size="sm">Create item</Button>
+          </div>
           <CardBody className="p-0">
             <Table>
               <TableHead>

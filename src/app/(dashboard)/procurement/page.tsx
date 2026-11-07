@@ -186,19 +186,12 @@ export default function ProcurementPage() {
       <div className="grid gap-5 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader
-            actions={
-              <div className="flex items-end gap-2">
-                <Input
-                  placeholder="Search PO number…"
-                  className="w-[220px]"
-                  value=""
-                  onChange={() => {}}
-                />
-              </div>
-            }
             description="Purchase orders and their line items."
             title="Purchase Orders"
           />
+          <div className="flex items-end gap-2 p-4">
+            <Input placeholder="Search PO number…" className="w-[220px]" value="" onChange={() => {}} />
+          </div>
           <CardBody className="p-0">
             {loading ? (
               <div className="p-8 text-center text-slate-500">Loading…</div>
