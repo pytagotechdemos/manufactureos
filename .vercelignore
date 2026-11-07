@@ -1,0 +1,15 @@
+# Files excluded from `vercel deploy` uploads.
+# Secrets are provided through Vercel environment variables instead.
+node_modules
+.next
+.git
+.env
+.env.*
+!.env.example
+.vercel
+coverage
+test-results
+playwright-report
+blob-report
+tsconfig.tsbuildinfo
+next-env.d.ts

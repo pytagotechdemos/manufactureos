@@ -29,6 +29,11 @@ export const auth = betterAuth({
   plugins: [admin()],
   advanced: {
     useSecureCookies: process.env.NODE_ENV === "production",
+    // Every identity column in our schema is `@db.Uuid`; Better Auth's default
+    // id generator emits 32-char base64url strings that Postgres rejects.
+    database: {
+      generateId: "uuid",
+    },
   },
   user: {
     additionalFields: {
