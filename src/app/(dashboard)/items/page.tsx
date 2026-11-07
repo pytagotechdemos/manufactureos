@@ -1,15 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
-import { StatusBadge } from "@/components/ui/badge";
+import { StatusBadge, humanize } from "@/components/ui/badge";
 import { Table, TableBody, TableHead, Td, Th, Tr } from "@/components/ui/table";
 import { EmptyState } from "@/components/ui/empty-state";
-import { SearchInput, Field, Input, Select } from "@/components/ui/form";
+import { Field, Input, SearchInput, Select } from "@/components/ui/form";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Edit, Plus } from "lucide-react";
 
 interface ItemRow {
   id: string;
@@ -27,33 +27,46 @@ interface ItemRow {
   minimumOrderQty: string | null;
   lotSizeMultiple: string | null;
   status: string;
-  baseUom: { code: string } | null;
+  baseUom: { code: string; name: string } | null;
+  category: { code: string; name: string } | null;
   createdAt: string;
 }
 
-interface Category {
+interface CategoryOption {
   id: string;
   code: string;
   name: string;
 }
 
-interface Uom {
+interface UomOption {
   id: string;
   code: string;
   name: string;
 }
 
-type ItemFormMode = "create" | "edit";
+function StatCard({ label, value, hint }: { label: string; value: number; hint: string }) {
+  return (
+    <Card>
+      <CardBody className="space-y-1">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">{label}</p>
+        <p className="tnum text-2xl font-semibold text-slate-900">{value}</p>
+        <p className="text-[12px] text-slate-500">{hint}</p>
+      </CardBody>
+    </Card>
+  );
+}
 
 export default function ItemsPage() {
   const [items, setItems] = useState<ItemRow[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [uoms, setUoms] = useState<Uom[]>([]);
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
+  const [uoms, setUoms] = useState<UomOption[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [formMode, setFormMode] = useState<ItemFormMode | null>(null);
+
+  const [formMode, setFormMode] = useState<"create" | "edit" | null>(null);
   const [editingItem, setEditingItem] = useState<ItemRow | null>(null);
 
   const [formSku, setFormSku] = useState("");
@@ -64,11 +77,11 @@ export default function ItemsPage() {
   const [formSupplyType, setFormSupplyType] = useState("BUY");
   const [formBaseUomId, setFormBaseUomId] = useState("");
   const [formStandardCost, setFormStandardCost] = useState("");
-  const [formReorderPoint, setFormReorderPoint] = useState("");
-  const [formSafetyStock, setFormSafetyStock] = useState("");
+  const [formReorderPoint, setFormReorderPoint] = useState("0");
+  const [formSafetyStock, setFormSafetyStock] = useState("0");
   const [formLeadDays, setFormLeadDays] = useState("0");
-  const [formMinOrderQty, setFormMinOrderQty] = useState("");
-  const [formLotSize, setFormLotSize] = useState("");
+  const [formMinOrderQty, setFormMinOrderQty] = useState("0");
+  const [formLotSize, setFormLotSize] = useState("0");
   const [formStatus, setFormStatus] = useState("ACTIVE");
 
   const load = useCallback(async () => {
@@ -76,7 +89,7 @@ export default function ItemsPage() {
     setError(null);
     try {
       const [itemRes, catRes, uomRes] = await Promise.all([
-        fetch("/api/v1/items?limit=200"),
+        fetch("/api/v1/items?limit=100"),
         fetch("/api/v1/categories"),
         fetch("/api/v1/uoms"),
       ]);
@@ -96,28 +109,28 @@ export default function ItemsPage() {
     load();
   }, [load]);
 
-  const filtered = items.filter(
-    (item) =>
-      item.sku.toLowerCase().includes(search.toLowerCase()) ||
-      item.name.toLowerCase().includes(search.toLowerCase()),
+  const filtered = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    if (!needle) return items;
+    return items.filter(
+      (item) =>
+        item.sku.toLowerCase().includes(needle) ||
+        item.name.toLowerCase().includes(needle) ||
+        (item.category?.name ?? "").toLowerCase().includes(needle),
+    );
+  }, [items, search]);
+
+  const stats = useMemo(
+    () => ({
+      total: items.length,
+      active: items.filter((item) => item.status === "ACTIVE").length,
+      bought: items.filter((item) => item.supplyType === "BUY").length,
+      made: items.filter((item) => item.supplyType === "MAKE").length,
+    }),
+    [items],
   );
 
-  const itemTypeLabel = (v: string) => {
-    const m: Record<string, string> = {
-      RAW_MATERIAL: "Bahan Baku",
-      PURCHASED_COMPONENT: "Komponen Pembelian",
-      SUB_ASSEMBLY: "Sub-Assembly",
-      FINISHED_GOODS: "Barang Jadi",
-      CONSUMABLE: "Konsumsi",
-    };
-    return m[v] ?? v;
-  };
-
-  const supplyTypeLabel = (v: string) => (v === "MAKE" ? "Buat Sendiri" : "Beli");
-
-  const openCreate = () => {
-    setFormMode("create");
-    setEditingItem(null);
+  function resetForm() {
     setFormSku("");
     setFormName("");
     setFormDescription("");
@@ -126,80 +139,105 @@ export default function ItemsPage() {
     setFormSupplyType("BUY");
     setFormBaseUomId("");
     setFormStandardCost("");
-    setFormReorderPoint("");
-    setFormSafetyStock("");
+    setFormReorderPoint("0");
+    setFormSafetyStock("0");
     setFormLeadDays("0");
-    setFormMinOrderQty("");
-    setFormLotSize("");
+    setFormMinOrderQty("0");
+    setFormLotSize("0");
     setFormStatus("ACTIVE");
-  };
+  }
 
-  const openEdit = (item: ItemRow) => {
-    setFormMode("edit");
+  function openCreate() {
+    resetForm();
+    setEditingItem(null);
+    setFormMode("create");
+  }
+
+  function openStatusEditor(item: ItemRow) {
     setEditingItem(item);
-    setFormSku(item.sku);
-    setFormName(item.name);
-    setFormDescription(item.description ?? "");
-    setFormCategoryId(item.categoryId ?? "");
-    setFormItemType(item.itemType);
-    setFormSupplyType(item.supplyType);
-    setFormBaseUomId(item.baseUomId ?? "");
-    setFormStandardCost(item.standardMaterialCost ?? "");
-    setFormReorderPoint(item.reorderPoint ?? "");
-    setFormSafetyStock(item.safetyStock ?? "");
-    setFormLeadDays(String(item.purchasingLeadDays));
-    setFormMinOrderQty(item.minimumOrderQty ?? "");
-    setFormLotSize(item.lotSizeMultiple ?? "");
     setFormStatus(item.status);
-  };
+    setFormMode("edit");
+  }
 
-  const closeForm = () => {
+  function closeForm() {
     setFormMode(null);
     setEditingItem(null);
-  };
+  }
 
-  async function handleSaveItem(event: React.FormEvent) {
+  async function handleCreate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setSaving(true);
     setError(null);
-    const body = {
-      sku: formSku,
-      name: formName,
-      description: formDescription || undefined,
-      categoryId: formCategoryId || undefined,
-      itemType: formItemType,
-      supplyType: formSupplyType,
-      baseUomId: formBaseUomId || undefined,
-      standardMaterialCost: formStandardCost || undefined,
-      reorderPoint: formReorderPoint || undefined,
-      safetyStock: formSafetyStock || undefined,
-      purchasingLeadDays: parseInt(formLeadDays, 10) || 0,
-      minimumOrderQty: formMinOrderQty || undefined,
-      lotSizeMultiple: formLotSize || undefined,
-      status: formStatus,
-    };
-
     try {
-      const res = formMode === "create"
-        ? await fetch("/api/v1/items", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
-        : await fetch(`/api/v1/items/${editingItem!.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: formStatus }) });
-      if (!res.ok) throw new Error("Gagal menyimpan barang");
-      setNotice(formMode === "create" ? "Barang berhasil dibuat." : "Barang berhasil diperbarui.");
+      const res = await fetch("/api/v1/items", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sku: formSku,
+          name: formName,
+          description: formDescription || undefined,
+          categoryId: formCategoryId,
+          itemType: formItemType,
+          supplyType: formSupplyType,
+          baseUomId: formBaseUomId,
+          standardMaterialCost: formStandardCost || undefined,
+          reorderPoint: formReorderPoint || "0",
+          safetyStock: formSafetyStock || "0",
+          purchasingLeadDays: Number.parseInt(formLeadDays, 10) || 0,
+          minimumOrderQty: formMinOrderQty || "0",
+          lotSizeMultiple: formLotSize || "0",
+        }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal membuat barang");
+      setNotice(`Barang ${formSku} berhasil dibuat.`);
       closeForm();
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal menyimpan barang");
+      setError(err instanceof Error ? err.message : "Gagal membuat barang");
+    } finally {
+      setSaving(false);
     }
   }
 
-  async function handleDeleteItem(id: string, sku: string) {
-    if (!confirm(`Hapus barang ${sku}?`)) return;
+  async function handleUpdateStatus(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editingItem) return;
+    setSaving(true);
+    setError(null);
     try {
-      const res = await fetch(`/api/v1/items/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Gagal menghapus barang");
-      setNotice("Barang berhasil dihapus.");
+      const res = await fetch(`/api/v1/items/${editingItem.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: formStatus }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal memperbarui status");
+      setNotice(`Status ${editingItem.sku} diubah menjadi ${humanize(formStatus)}.`);
+      closeForm();
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal menghapus barang");
+      setError(err instanceof Error ? err.message : "Gagal memperbarui status");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleToggleStatus(item: ItemRow) {
+    const nextStatus = item.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+    setError(null);
+    try {
+      const res = await fetch(`/api/v1/items/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal mengubah status");
+      setNotice(`Status ${item.sku} diubah menjadi ${humanize(nextStatus)}.`);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal mengubah status");
     }
   }
 
@@ -208,98 +246,181 @@ export default function ItemsPage() {
       <PageHeader
         eyebrow="Data master"
         title="Data Master Barang"
-        description="Bahan baku, komponen pembelian, sub-assembly dan barang jadi."
+        description="Bahan baku, komponen pembelian, sub-assembly, dan barang jadi yang dipakai seluruh transaksi."
         actions={
-          <div className="flex items-end gap-2">
-            <Button onClick={openCreate} variant="primary">
-              <Plus aria-hidden className="size-4 mr-2" /> Tambah barang
-            </Button>
-          </div>
+          <Button variant="primary" onClick={openCreate}>
+            <Plus aria-hidden className="size-4" />
+            Tambah barang
+          </Button>
         }
       />
 
       {error ? <Alert tone="danger" onClose={() => setError(null)}>{error}</Alert> : null}
       {notice ? <Alert tone="success" onClose={() => setNotice(null)}>{notice}</Alert> : null}
 
-      {formMode ? (
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="Total barang" value={stats.total} hint="Seluruh status" />
+        <StatCard label="Aktif" value={stats.active} hint="Dapat dipakai transaksi" />
+        <StatCard label="Dibeli" value={stats.bought} hint="Supply type BUY" />
+        <StatCard label="Dibuat sendiri" value={stats.made} hint="Supply type MAKE" />
+      </div>
+
+      {formMode === "create" ? (
         <Card>
           <CardHeader
-            title={formMode === "create" ? "Tambah Barang" : "Edit Barang"}
-            description={formMode === "create" ? "Buat data master barang baru." : "Ubah data barang yang ada."}
+            title="Tambah barang"
+            description="Field bertanda bintang wajib diisi. Kategori dan satuan harus berstatus aktif."
           />
-          <CardBody className="space-y-4">
-            <form className="space-y-4" onSubmit={handleSaveItem}>
-              <div className="grid gap-4 sm:grid-cols-2">
+          <CardBody>
+            <form className="space-y-4" onSubmit={handleCreate}>
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 <Field label="SKU" required>
-                  <Input name="sku" required value={formSku} onChange={(e) => setFormSku(e.target.value)} />
+                  <Input
+                    name="sku"
+                    placeholder="RM-STEEL-001"
+                    required
+                    value={formSku}
+                    onChange={(event) => setFormSku(event.target.value)}
+                  />
                 </Field>
-                <Field label="Nama Barang" required>
-                  <Input name="name" required value={formName} onChange={(e) => setFormName(e.target.value)} />
-                </Field>
-                <Field label="Deskripsi">
-                  <Input name="description" value={formDescription} onChange={(e) => setFormDescription(e.target.value)} />
+                <Field label="Nama barang" required>
+                  <Input
+                    name="name"
+                    placeholder="Pelat baja 2 mm"
+                    required
+                    value={formName}
+                    onChange={(event) => setFormName(event.target.value)}
+                  />
                 </Field>
                 <Field label="Kategori" required>
-                  <Select name="categoryId" required value={formCategoryId} onChange={(e) => setFormCategoryId(e.target.value)}>
+                  <Select
+                    name="categoryId"
+                    required
+                    value={formCategoryId}
+                    onChange={(event) => setFormCategoryId(event.target.value)}
+                  >
                     <option value="">Pilih kategori</option>
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>{c.code} — {c.name}</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.code} — {category.name}
+                      </option>
                     ))}
                   </Select>
                 </Field>
-                <Field label="Tipe Barang" required>
-                  <Select name="itemType" required value={formItemType} onChange={(e) => setFormItemType(e.target.value)}>
-                    <option value="RAW_MATERIAL">Bahan Baku</option>
-                    <option value="PURCHASED_COMPONENT">Komponen Pembelian</option>
-                    <option value="SUB_ASSEMBLY">Sub-Assembly</option>
-                    <option value="FINISHED_GOODS">Barang Jadi</option>
+                <Field label="Tipe barang" required>
+                  <Select
+                    name="itemType"
+                    required
+                    value={formItemType}
+                    onChange={(event) => setFormItemType(event.target.value)}
+                  >
+                    <option value="RAW_MATERIAL">Bahan baku</option>
+                    <option value="PURCHASED_COMPONENT">Komponen pembelian</option>
+                    <option value="SUB_ASSEMBLY">Sub-assembly</option>
+                    <option value="FINISHED_GOODS">Barang jadi</option>
                     <option value="CONSUMABLE">Konsumsi</option>
                   </Select>
                 </Field>
-                <Field label="Tipe Persediaan" required>
-                  <Select name="supplyType" required value={formSupplyType} onChange={(e) => setFormSupplyType(e.target.value)}>
+                <Field label="Cara pengadaan" required>
+                  <Select
+                    name="supplyType"
+                    required
+                    value={formSupplyType}
+                    onChange={(event) => setFormSupplyType(event.target.value)}
+                  >
                     <option value="BUY">Beli</option>
-                    <option value="MAKE">Buat Sendiri</option>
+                    <option value="MAKE">Buat sendiri</option>
                   </Select>
                 </Field>
-                <Field label="Satuan Dasar" required>
-                  <Select name="baseUomId" required value={formBaseUomId} onChange={(e) => setFormBaseUomId(e.target.value)}>
+                <Field label="Satuan dasar" required>
+                  <Select
+                    name="baseUomId"
+                    required
+                    value={formBaseUomId}
+                    onChange={(event) => setFormBaseUomId(event.target.value)}
+                  >
                     <option value="">Pilih satuan</option>
-                    {uoms.map((u) => (
-                      <option key={u.id} value={u.id}>{u.code} — {u.name}</option>
+                    {uoms.map((uom) => (
+                      <option key={uom.id} value={uom.id}>
+                        {uom.code} — {uom.name}
+                      </option>
                     ))}
                   </Select>
                 </Field>
-                <Field label="Biaya Material Standar">
-                  <Input name="standardCost" type="number" step="0.0001" value={formStandardCost} onChange={(e) => setFormStandardCost(e.target.value)} />
+                <Field label="Biaya material standar" hint="Opsional, dalam Rupiah.">
+                  <Input
+                    name="standardMaterialCost"
+                    type="number"
+                    min="0"
+                    step="0.0001"
+                    value={formStandardCost}
+                    onChange={(event) => setFormStandardCost(event.target.value)}
+                  />
                 </Field>
-                <Field label="Titik Pemesanan Ulang">
-                  <Input name="reorderPoint" type="number" step="0.000001" value={formReorderPoint} onChange={(e) => setFormReorderPoint(e.target.value)} />
+                <Field label="Titik pemesanan ulang">
+                  <Input
+                    name="reorderPoint"
+                    type="number"
+                    min="0"
+                    step="0.000001"
+                    value={formReorderPoint}
+                    onChange={(event) => setFormReorderPoint(event.target.value)}
+                  />
                 </Field>
-                <Field label="Safety Stock">
-                  <Input name="safetyStock" type="number" step="0.000001" value={formSafetyStock} onChange={(e) => setFormSafetyStock(e.target.value)} />
+                <Field label="Safety stock">
+                  <Input
+                    name="safetyStock"
+                    type="number"
+                    min="0"
+                    step="0.000001"
+                    value={formSafetyStock}
+                    onChange={(event) => setFormSafetyStock(event.target.value)}
+                  />
                 </Field>
-                <Field label="Lead Time (hari)">
-                  <Input name="leadDays" type="number" value={formLeadDays} onChange={(e) => setFormLeadDays(e.target.value)} />
+                <Field label="Lead time (hari)">
+                  <Input
+                    name="purchasingLeadDays"
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={formLeadDays}
+                    onChange={(event) => setFormLeadDays(event.target.value)}
+                  />
                 </Field>
-                <Field label="Min Order Qty">
-                  <Input name="minOrderQty" type="number" step="0.000001" value={formMinOrderQty} onChange={(e) => setFormMinOrderQty(e.target.value)} />
+                <Field label="Minimum order qty">
+                  <Input
+                    name="minimumOrderQty"
+                    type="number"
+                    min="0"
+                    step="0.000001"
+                    value={formMinOrderQty}
+                    onChange={(event) => setFormMinOrderQty(event.target.value)}
+                  />
                 </Field>
-                <Field label="Lot Size Multiple">
-                  <Input name="lotSize" type="number" step="0.000001" value={formLotSize} onChange={(e) => setFormLotSize(e.target.value)} />
-                </Field>
-                <Field label="Status" required>
-                  <Select name="status" required value={formStatus} onChange={(e) => setFormStatus(e.target.value)}>
-                    <option value="ACTIVE">Aktif</option>
-                    <option value="INACTIVE">Tidak Aktif</option>
-                  </Select>
+                <Field label="Kelipatan lot size">
+                  <Input
+                    name="lotSizeMultiple"
+                    type="number"
+                    min="0"
+                    step="0.000001"
+                    value={formLotSize}
+                    onChange={(event) => setFormLotSize(event.target.value)}
+                  />
                 </Field>
               </div>
-              <div className="flex gap-3">
-                <Button type="submit" variant="primary" disabled={loading}>
-                  {loading ? "Menyimpan…" : "Simpan Barang"}
+              <Field label="Deskripsi" className="max-w-2xl">
+                <Input
+                  name="description"
+                  placeholder="Spesifikasi singkat, grade material, atau catatan teknis."
+                  value={formDescription}
+                  onChange={(event) => setFormDescription(event.target.value)}
+                />
+              </Field>
+              <div className="flex flex-wrap gap-2">
+                <Button type="submit" variant="primary" loading={saving}>
+                  {saving ? "Menyimpan…" : "Simpan barang"}
                 </Button>
-                <Button type="button" variant="secondary" onClick={closeForm}>
+                <Button type="button" variant="secondary" onClick={closeForm} disabled={saving}>
                   Batal
                 </Button>
               </div>
@@ -308,30 +429,66 @@ export default function ItemsPage() {
         </Card>
       ) : null}
 
-      <div className="flex items-end gap-2 p-4">
-        <SearchInput value={search} onChange={setSearch} placeholder="Cari barang…" />
-      </div>
+      {formMode === "edit" && editingItem ? (
+        <Card>
+          <CardHeader
+            title={`Ubah status ${editingItem.sku}`}
+            description={`${editingItem.name} · status saat ini ${humanize(editingItem.status)}.`}
+          />
+          <CardBody>
+            <form className="max-w-md space-y-4" onSubmit={handleUpdateStatus}>
+              <Field label="Status" required>
+                <Select
+                  name="status"
+                  required
+                  value={formStatus}
+                  onChange={(event) => setFormStatus(event.target.value)}
+                >
+                  <option value="ACTIVE">Aktif</option>
+                  <option value="INACTIVE">Tidak aktif</option>
+                </Select>
+              </Field>
+              <div className="flex flex-wrap gap-2">
+                <Button type="submit" variant="primary" loading={saving}>
+                  {saving ? "Menyimpan…" : "Simpan status"}
+                </Button>
+                <Button type="button" variant="secondary" onClick={closeForm} disabled={saving}>
+                  Batal
+                </Button>
+              </div>
+            </form>
+          </CardBody>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader
-          description={`${filtered.length} barang${filtered.length === 1 ? "" : "s"} dalam data master.`}
-          title="Daftar Barang"
+          title="Daftar barang"
+          description={`${filtered.length} dari ${items.length} barang ditampilkan.`}
+          actions={
+            <SearchInput value={search} onChange={setSearch} placeholder="Cari SKU, nama, kategori…" />
+          }
         />
         <CardBody className="p-0">
           {loading ? (
-            <div className="p-8 text-center text-slate-500">Memuat…</div>
+            <div className="p-8 text-center text-slate-500">Memuat data barang…</div>
           ) : filtered.length === 0 ? (
-            <EmptyState title="Tidak ada barang yang cocok dengan pencarian" />
+            <EmptyState
+              title="Belum ada barang yang cocok"
+              description="Ubah kata kunci pencarian atau tambahkan barang baru."
+            />
           ) : (
             <Table>
               <TableHead>
                 <Tr>
                   <Th>SKU</Th>
                   <Th>Nama</Th>
+                  <Th>Kategori</Th>
                   <Th>Tipe</Th>
-                  <Th>Persediaan</Th>
+                  <Th>Pengadaan</Th>
                   <Th align="right">Satuan</Th>
-                  <Th align="right">Biaya Std.</Th>
+                  <Th align="right">Biaya std.</Th>
+                  <Th align="right">Lead time</Th>
                   <Th>Status</Th>
                   <Th align="right">Aksi</Th>
                 </Tr>
@@ -339,20 +496,42 @@ export default function ItemsPage() {
               <TableBody>
                 {filtered.map((item) => (
                   <Tr key={item.id}>
-                    <Td className="font-medium tnum">{item.sku}</Td>
-                    <Td className="text-slate-600">{item.name}</Td>
-                    <Td className="text-slate-600">{itemTypeLabel(item.itemType)}</Td>
-                    <Td className="text-slate-600">{supplyTypeLabel(item.supplyType)}</Td>
-                    <Td align="right" className="tnum text-slate-600">{item.baseUom?.code ?? "—"}</Td>
-                    <Td align="right" className="tnum text-slate-600">{item.standardMaterialCost ?? "—"}</Td>
-                    <Td>{<StatusBadge status={item.status} />}</Td>
+                    <Td className="tnum font-medium">{item.sku}</Td>
+                    <Td className="text-slate-700">{item.name}</Td>
+                    <Td className="text-slate-600">{item.category?.name ?? "—"}</Td>
+                    <Td className="text-slate-600">{humanize(item.itemType)}</Td>
+                    <Td className="text-slate-600">{humanize(item.supplyType)}</Td>
+                    <Td align="right" className="tnum text-slate-600">
+                      {item.baseUom?.code ?? "—"}
+                    </Td>
+                    <Td align="right" className="tnum text-slate-600">
+                      {item.standardMaterialCost ?? "—"}
+                    </Td>
+                    <Td align="right" className="tnum text-slate-600">
+                      {item.purchasingLeadDays} hari
+                    </Td>
+                    <Td>
+                      <StatusBadge status={item.status} />
+                    </Td>
                     <Td align="right">
-                      <Button variant="ghost" size="sm" onClick={() => openEdit(item)} className="mr-2">
-                        <Edit aria-hidden className="size-4" />
-                      </Button>
-                      <Button variant="danger" size="sm" onClick={() => handleDeleteItem(item.id, item.sku)}>
-                        <Trash2 aria-hidden className="size-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          aria-label={`Ubah status ${item.sku}`}
+                          title="Ubah status"
+                          onClick={() => openStatusEditor(item)}
+                        >
+                          <Edit aria-hidden className="size-4" />
+                        </Button>
+                        <Button
+                          variant={item.status === "ACTIVE" ? "danger" : "secondary"}
+                          size="sm"
+                          onClick={() => handleToggleStatus(item)}
+                        >
+                          {item.status === "ACTIVE" ? "Nonaktifkan" : "Aktifkan"}
+                        </Button>
+                      </div>
                     </Td>
                   </Tr>
                 ))}
