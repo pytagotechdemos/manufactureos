@@ -13,7 +13,9 @@
     "test:watch": "vitest",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:seed": "prisma db seed"
+    "prisma:seed": "prisma db seed",
+    "admin:create": "tsx scripts/create-admin.ts",
+    "rbac:check": "tsx scripts/check-rbac.ts"
   },
   "dependencies": {
     "@better-auth/prisma-adapter": "1.7.17",

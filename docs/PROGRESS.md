@@ -51,25 +51,27 @@ Phase 7 — Deployment & end-to-end verification (in progress)
 - Deterministic seed `prisma/seed.ts`: 5 items, 2 approved BOMs, UOMs, categories, supplier, 2 warehouses, 3 work centers, stock balances. BOM lines are inserted while the BOM is `DRAFT` and the BOM is approved afterwards, because the immutability trigger rejects `INSERT` into `BomLine` for approved parents.
 - `scripts/create-admin.ts` provisions the first administrator (registration is closed).
 
-### Verification (latest run)
-- Typecheck: passed
-- Lint: passed (0 errors; 8 unused-variable warnings in `prisma/seed.ts`)
-- Tests: 47 passed, 10 skipped
-- Production build: passed (42 routes)
-
 ### Deployment (implemented)
 - PostgreSQL: Neon, 20 migrations applied with `prisma migrate deploy`, seed data loaded, admin user provisioned.
+- Access control seeded by `prisma/seed-access-control.ts` (8 roles, granular permissions); `scripts/create-admin.ts` grants the administrator `SUPER_ADMIN`.
 - GitHub: public repository `pytagotechdemos/manufactureos` (`.env*` ignored; only `.env.example` committed).
 - Vercel: project `manufactureos` linked to the GitHub repository (push-to-deploy), env vars `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` set for production and preview.
 - Production URL: `https://manufactureos-six.vercel.app` — serves the app and redirects `/` to `/login`.
 
+### Verification (implemented)
+- Typecheck: passed
+- Lint: passed (0 errors; 7 unused-variable warnings in `prisma/seed.ts`)
+- Unit/integration tests: 47 passed, 10 skipped
+- Production build: passed (42 routes)
+- Playwright E2E (`tests/e2e/complete-lifecycle.e2e.ts`): 1 passed — login, Items, BOM create, Procurement, Manufacturing, Work Orders, Quality, Production Receipts, Reports, Administration.
+- Production sign-in: HTTP 200, session cookie issued, protected pages render.
+
 ## Not implemented / not verified
-- Sign-in end-to-end against production returned HTTP 500 before the UUID id fix; needs re-verification after the fix deploys.
-- E2E Playwright test (`tests/e2e/complete-lifecycle.e2e.ts`) written but never executed.
-- RBAC seed row counts not verified against the database.
-- Some screens are read/list views: item master create/edit, BOM draft editing UI, purchase order/goods receipt forms, MO creation from MRP, work-order execution, QC form-to-API wiring, inventory receipt/issue forms.
+- RBAC seed row counts not verified against the database (the seed runs, but no count assertions exist).
+- Screens are mostly list/read views: item master create/edit, BOM draft editing UI, purchase order/goods receipt forms, MO creation from MRP, work-order execution forms, QC form-to-API wiring, inventory receipt/issue forms.
 - Reporting dashboard beyond the current `/reports` screen (costing, inventory valuation, production variance) not implemented.
 - Custom domain, preview-deployment protection rules, and CI pipeline not configured.
+- E2E runs against whatever `DATABASE_URL` points at (currently Neon); there is no disposable-database variant of it.
 
 ## Risks and blockers
 - Local Compose PostgreSQL on port 5433 because host port 5432 was allocated; volume `bom_manufactureos-postgres`.
@@ -79,9 +81,8 @@ Phase 7 — Deployment & end-to-end verification (in progress)
 - Global git credential settings on this machine prompt for a different GitHub identity; pushes use an explicit token URL.
 
 ## Next slice
-1. Re-verify sign-in and a protected page on production after the UUID id fix.
-2. Run the Playwright E2E lifecycle test against the deployed app.
-3. Verify RBAC seed row counts and audit logging against the Neon database.
-4. Complete the remaining CRUD forms (items, BOM draft editing, procurement, MO/work order, QC, inventory).
-5. Add production costing and inventory valuation reporting.
-6. Add CI (typecheck/lint/test/build) and a deployment guide.
+1. Add count/consistency assertions for the RBAC seed.
+2. Complete the remaining CRUD forms (items, BOM draft editing, procurement, MO/work order, QC, inventory).
+3. Add production costing and inventory valuation reporting.
+4. Add CI (typecheck/lint/test/build) and a deployment guide; consider a disposable-database E2E job.
+5. Add a custom domain and decide preview-deployment protection.
