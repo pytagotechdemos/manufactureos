@@ -75,7 +75,11 @@ export default function ItemsPage() {
 
       <Card>
         <CardHeader
-          actions={<SearchInput value={search} onChange={setSearch} placeholder="Search items…" />}
+          actions={
+            <div className="flex items-end gap-2 p-4">
+              <SearchInput placeholder="Search items…" />
+            </div>
+          }
           description={`${items.length} active item${items.length === 1 ? "" : "s"} in the master data.`}
           title="Item Master"
         />

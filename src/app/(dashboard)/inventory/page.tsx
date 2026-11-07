@@ -96,7 +96,11 @@ export default function InventoryPage() {
 
       <Card>
         <CardHeader
-          actions={<SearchInput value={search} onChange={setSearch} placeholder="Search item, SKU or warehouse…" />}
+          actions={
+            <div className="flex items-end gap-2 p-4">
+              <SearchInput placeholder="Search item, SKU or warehouse…" />
+            </div>
+          }
           description={`${balances.length} stock line${balances.length === 1 ? "" : "s"} across warehouses.`}
           title="Stock Balances"
         />

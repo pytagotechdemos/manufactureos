@@ -53,7 +53,7 @@ export default async function OverviewPage() {
             title="Item Master"
           />
           <div className="flex items-end gap-2 p-4">
-            <SearchInput value="" onChange={() => {}} placeholder="Search items…" />
+            <SearchInput placeholder="Search items…" />
             <Button variant="primary" size="sm">Create item</Button>
           </div>
           <CardBody className="p-0">
