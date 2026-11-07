@@ -63,8 +63,19 @@ Phase 7 — Deployment & end-to-end verification (in progress)
 - Lint: passed (0 errors; 7 unused-variable warnings in `prisma/seed.ts`)
 - Unit/integration tests: 47 passed, 10 skipped
 - Production build: passed (42 routes)
-- Playwright E2E (`tests/e2e/complete-lifecycle.e2e.ts`): 1 passed — login, Items, BOM create, Procurement, Manufacturing, Work Orders, Quality, Production Receipts, Reports, Administration.
-- Production sign-in: HTTP 200, session cookie issued, protected pages render.
+- Playwright E2E (`tests/e2e/complete-lifecycle.e2e.ts`): 1 passed
+- Production sign-in: HTTP 200, session cookie issued, **all 10 key pages return 200** (`/overview`, `/items`, `/procurement`, `/manufacturing`, `/manufacturing/work-orders`, `/quality`, `/inventory`, `/reports`, `/administration`, `/boms/create`)
+
+## UI/UX rework (completed)
+- New design system: `Button`, `Card`, `Badge`/`StatusBadge`, `Field`/`Input`/`Select`/`Textarea`, `Table`, `Stat`/`StatGrid`, `Alert`, `EmptyState`, `PageHeader`, `Tabs`, `Spinner`/`Skeleton` under `src/components/ui/`
+- New shell: `AppShell` with sticky header, collapsible sidebar nav (mobile drawer), user profile + sign-out
+- Login page redesigned (brand panel, consistent inputs/buttons, `role=alert` error banner)
+- All dashboard screens wired to real APIs: overview metrics, items, procurement (PO + goods receipt), manufacturing, work orders, quality inspections, inventory balances
+- Administration: real users/roles from DB, status badges, create-account form via `POST /api/v1/users`
+- Raw UUID text inputs replaced with dropdowns backed by new GET endpoints
+- Presentation helpers: `formatDate`, `formatDateTime`, `formatMoney`, `formatQuantity`, `formatRelative`, `truncateId` (`src/lib/format.ts`) — Asia/Jakarta presentation, UTC persistence
+- Fixed RSC boundary error: `SearchInput` manages value internally so event handlers aren't passed across Server/Client Component boundary
+- Added missing GET endpoints: `/api/v1/suppliers`, `/api/v1/uoms`, `/api/v1/categories`, `/api/v1/warehouses`, `/api/v1/roles`, `/api/v1/users` (+POST), `/api/v1/purchase-order-lines`, `/api/v1/procurement/goods-receipts` (GET+POST)
 
 ## Not implemented / not verified
 - RBAC seed row counts not verified against the database (the seed runs, but no count assertions exist).
