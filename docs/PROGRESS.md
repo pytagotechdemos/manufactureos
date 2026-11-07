@@ -67,6 +67,7 @@ Phase 7 — Deployment & end-to-end verification (in progress)
 - Production sign-in: HTTP 200, session cookie issued, **all 10 key pages return 200** (`/overview`, `/items`, `/procurement`, `/manufacturing`, `/manufacturing/work-orders`, `/quality`, `/inventory`, `/reports`, `/administration`, `/boms/create`)
 
 ## UI/UX rework (completed)
+- UI diterjemahkan sepenuhnya ke **Bahasa Indonesia**: login, navigasi sidebar, semua halaman dashboard (overview, items, engineering/bom-explorer, planning, inventory, procurement, manufacturing, work-orders, receipts, quality, reports, administration, boms/create), tabel, form, badge status, dan alert
 - New design system: `Button`, `Card`, `Badge`/`StatusBadge`, `Field`/`Input`/`Select`/`Textarea`, `Table`, `Stat`/`StatGrid`, `Alert`, `EmptyState`, `PageHeader`, `Tabs`, `Spinner`/`Skeleton` under `src/components/ui/`
 - New shell: `AppShell` with sticky header, collapsible sidebar nav (mobile drawer), user profile + sign-out
 - Login page redesigned (brand panel, consistent inputs/buttons, `role=alert` error banner)
