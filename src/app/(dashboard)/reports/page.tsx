@@ -163,6 +163,7 @@ export default function ReportsPage() {
   const valuationRows = useMemo<ValuationRow[]>(
     () =>
       balances
+        .filter((row) => toNumber(row.onHand) > 0)
         .map((row) => ({
           key: row.id,
           sku: row.item.sku,

@@ -8,6 +8,12 @@ export type BomExplosionContext = {
   itemUnits: ReadonlyMap<string, BomItemUnit>;
   uoms: ReadonlyMap<string, BomUnit>;
   conversions: readonly BomUomConversion[];
+  /**
+   * When true, MAKE components are kept as leaf requirements instead of being
+   * expanded into their own components. Multi-level MOs consume the
+   * sub-assembly stock that a dedicated child MO produces.
+   */
+  stopAtMake?: boolean;
 };
 
 type RequirementTotal = {
@@ -124,9 +130,17 @@ function explodeItem(
       }
       childUom = childUnit.baseUom;
     }
-    const childBom = line.make ? getChildBom(catalog, line.componentItemId) : undefined;
-    if (line.make && !childBom) {
+    const childBom = line.make && !context?.stopAtMake ? getChildBom(catalog, line.componentItemId) : undefined;
+    if (line.make && !childBom && !context?.stopAtMake) {
       throw new BomDomainError("MISSING_CHILD_BOM", `MAKE component ${line.componentItemId} has no BOM`);
+    }
+
+    if (!childBom) {
+      // Leaf component: BUY items and MAKE components when the explosion stops at sub-assemblies.
+      const leafQuantity = childQuantity.toString();
+      children.push({ itemId: line.componentItemId, quantity: leafQuantity, uom: childUom, path: [...currentPath, line.componentItemId], children: [] });
+      addRequirement(requirements, line.componentItemId, childUom, childQuantity);
+      continue;
     }
 
     const result = explodeItem(line.componentItemId, childQuantity, childUom, childBom, catalog, currentPath, context);

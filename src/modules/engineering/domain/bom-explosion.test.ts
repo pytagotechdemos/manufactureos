@@ -62,6 +62,36 @@ describe("explodeBom", () => {
     expect(result.requirements).toEqual([{ itemId: "board", quantity: "35", uom: "EA" }]);
   });
 
+  it("keeps MAKE components as leaf requirements when the explosion stops at sub-assemblies", () => {
+    const root = bom({
+      lines: [
+        { componentItemId: "top-assembly", quantity: "1", scrapRate: "0", uom: "EA", make: true },
+        { componentItemId: "screw", quantity: "8", scrapRate: "0", uom: "EA", make: false },
+      ],
+    });
+    const top = bom({
+      bomId: "top-bom",
+      outputItemId: "top-assembly",
+      lines: [{ componentItemId: "board", quantity: "3", scrapRate: "0", uom: "EA", make: false }],
+    });
+
+    const result = explodeBom(root, "5", new Map([["top-assembly", [top]]]), {
+      itemUnits: new Map([
+        ["desk", { baseUom: "EA", dimension: "COUNT", precision: 0 }],
+        ["top-assembly", { baseUom: "EA", dimension: "COUNT", precision: 0 }],
+        ["screw", { baseUom: "EA", dimension: "COUNT", precision: 0 }],
+      ]),
+      uoms: new Map([["EA", { code: "EA", dimension: "COUNT", precision: 0 }]]),
+      conversions: [],
+      stopAtMake: true,
+    });
+
+    expect(result.requirements).toEqual([
+      { itemId: "screw", quantity: "40", uom: "EA" },
+      { itemId: "top-assembly", quantity: "5", uom: "EA" },
+    ]);
+  });
+
   it("rejects a missing MAKE child BOM", () => {
     expect(() =>
       explodeBom(

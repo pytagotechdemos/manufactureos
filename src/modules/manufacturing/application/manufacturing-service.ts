@@ -55,6 +55,10 @@ async function loadExplosionContext(transaction: Prisma.TransactionClient): Prom
     itemUnits: new Map(items.map((item) => [item.id, { baseUom: item.baseUom.code, dimension: item.baseUom.dimension, precision: item.baseUom.precision }])),
     uoms: new Map(uoms.map((uom) => [uom.code, uom])),
     conversions: conversions.filter((conversion) => conversion.fromUom.dimension === conversion.toUom.dimension).map((conversion) => ({ from: conversion.fromUom.code, to: conversion.toUom.code, factor: conversion.factor.toString(), dimension: conversion.fromUom.dimension })),
+    // A manufacturing order consumes the sub-assembly itself; the sub-assembly is
+    // produced by its own MAKE order. Expanding further would consume the
+    // sub-assembly components twice.
+    stopAtMake: true,
   };
   return { catalog, context, snapshots: boms.map((bom) => ({ id: bom.id, outputItemId: bom.outputItemId, outputQty: bom.outputQty.toString(), effectiveDate: bom.effectiveDate?.toISOString() ?? null, lines: bomInput(bom).lines })) };
 }
