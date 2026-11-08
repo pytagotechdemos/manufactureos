@@ -70,6 +70,7 @@ export class WorkOrderService {
     return serializable(this.prisma, async (transaction) => {
       const workOrder = await transaction.workOrder.findUnique({ where: { id: workOrderId }, include: { manufacturingOrder: true } });
       if (!workOrder) throw new WorkOrderError("NOT_FOUND", "Work order not found");
+      if (workOrder.manufacturingOrder.status !== "RELEASED" && workOrder.manufacturingOrder.status !== "IN_PROGRESS") throw new WorkOrderError("INVALID_STATE", "Manufacturing order must be released before work starts");
       const previous = await transaction.workOrder.findFirst({ where: { manufacturingOrderId: workOrder.manufacturingOrderId, sequence: { lt: workOrder.sequence } }, orderBy: { sequence: "desc" } });
       assertPolicy(() => assertCanStart(workOrder.status, previous?.status));
       const updated = await transaction.workOrder.update({ where: { id: workOrderId }, data: { status: "IN_PROGRESS", startedAt: workOrder.startedAt ?? new Date() } });
@@ -81,8 +82,9 @@ export class WorkOrderService {
 
   async pause(actorId: string, workOrderId: string) {
     return serializable(this.prisma, async (transaction) => {
-      const workOrder = await transaction.workOrder.findUnique({ where: { id: workOrderId } });
+      const workOrder = await transaction.workOrder.findUnique({ where: { id: workOrderId }, include: { manufacturingOrder: true } });
       if (!workOrder) throw new WorkOrderError("NOT_FOUND", "Work order not found");
+      if (workOrder.manufacturingOrder.status !== "IN_PROGRESS") throw new WorkOrderError("INVALID_STATE", "Manufacturing order is not in progress");
       assertPolicy(() => assertCanPause(workOrder.status));
       const updated = await transaction.workOrder.update({ where: { id: workOrderId, status: "IN_PROGRESS" }, data: { status: "PAUSED" } });
       await transaction.auditLog.create({ data: { actorId, action: "work_order.paused", entityType: "WorkOrder", entityId: workOrderId, source: "manufacturing", metadata: { number: workOrder.number } } });
@@ -115,8 +117,9 @@ export class WorkOrderService {
         if (duplicate.workOrderId !== workOrderId || !duplicate.minutes.equals(parsed.data.minutes)) throw new WorkOrderError("CONFLICT", "Time entry idempotency key conflicts with a different entry");
         return duplicate;
       }
-      const workOrder = await transaction.workOrder.findUnique({ where: { id: workOrderId }, include: { workCenter: true } });
+      const workOrder = await transaction.workOrder.findUnique({ where: { id: workOrderId }, include: { workCenter: true, manufacturingOrder: true } });
       if (!workOrder) throw new WorkOrderError("NOT_FOUND", "Work order not found");
+      if (workOrder.manufacturingOrder.status !== "IN_PROGRESS") throw new WorkOrderError("INVALID_STATE", "Manufacturing order is not in progress");
       if (workOrder.status !== "IN_PROGRESS") throw new WorkOrderError("INVALID_STATE", "Time can only be recorded for an in-progress work order");
       if (!workOrder.workCenter || workOrder.workCenter.status !== "ACTIVE") throw new WorkOrderError("INVALID_STATE", "An active work center with an hourly rate must be assigned");
       const entry = await transaction.workOrderTimeEntry.create({ data: { workOrderId, idempotencyKey: parsed.data.idempotencyKey, minutes: new Prisma.Decimal(parsed.data.minutes), hourlyRate: workOrder.workCenter.hourlyRate, actorId } });
@@ -131,6 +134,7 @@ export class WorkOrderService {
     return serializable(this.prisma, async (transaction) => {
       const workOrder = await transaction.workOrder.findUnique({ where: { id: workOrderId }, include: { manufacturingOrder: true } });
       if (!workOrder) throw new WorkOrderError("NOT_FOUND", "Work order not found");
+      if (workOrder.manufacturingOrder.status !== "IN_PROGRESS") throw new WorkOrderError("INVALID_STATE", "Manufacturing order is not in progress");
       const accepted = new Prisma.Decimal(parsed.data.completedQty);
       const rejected = new Prisma.Decimal(parsed.data.rejectedQty);
       assertPolicy(() => assertCanComplete(workOrder.status, workOrder.completedQty.toString(), workOrder.rejectedQty.toString(), workOrder.targetQuantity.toString(), accepted.toString(), rejected.toString()));
