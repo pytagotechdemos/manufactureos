@@ -6,9 +6,10 @@ export async function GET(request: Request) {
     const access = await workOrderAccess("work_order.read");
     if ("error" in access) return access.error;
     const params = new URL(request.url).searchParams;
-    return NextResponse.json(await workOrders.list({
+    const data = await workOrders.list({
       ...(params.has("status") ? { status: params.get("status") } : {}),
       ...(params.has("limit") ? { limit: params.get("limit") } : {}),
-    }));
+    });
+    return NextResponse.json({ data });
   } catch (error) { return workOrderErrorResponse(error); }
 }
