@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { planning, planningAccess, planningErrorResponse } from "../_shared";
 
+export const maxDuration = 60;
+
 export async function GET() {
   try {
     const access = await planningAccess("mrp.run");

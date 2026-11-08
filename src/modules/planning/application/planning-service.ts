@@ -17,7 +17,7 @@ function decimal(value: string) {
 async function serializable<T>(prisma: PrismaClient, operation: (transaction: Prisma.TransactionClient) => Promise<T>) {
   for (let attempt = 0; ; attempt += 1) {
     try {
-      return await prisma.$transaction(operation, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+      return await prisma.$transaction(operation, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 10_000, timeout: 30_000 });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034" && attempt < 3) continue;
       throw error;
@@ -162,36 +162,40 @@ export class PlanningService {
         },
       });
       const bucketsByKey = new Map<string, string>();
-      for (const bucket of result.buckets) {
-        const saved = await transaction.mrpBucket.create({
-          data: {
-            runId: run.id,
-            itemId: bucket.itemId,
-            bucketDate: new Date(`${bucket.date}T00:00:00.000Z`),
-            grossRequirements: decimal(bucket.grossRequirements),
-            scheduledReceipts: decimal(bucket.scheduledReceipts),
-            projectedAvailable: decimal(bucket.projectedAvailable),
-            netRequirements: decimal(bucket.netRequirements),
-          },
-        });
-        bucketsByKey.set(`${bucket.itemId}:${bucket.date}`, saved.id);
-      }
-      for (const recommendation of result.recommendations) {
-        const saved = await transaction.mrpRecommendation.create({
-          data: {
-            runId: run.id,
-            bucketId: bucketsByKey.get(`${recommendation.itemId}:${recommendation.requiredDate}`),
-            itemId: recommendation.itemId,
-            supplyType: recommendation.supplyType,
-            quantity: decimal(recommendation.quantity),
-            requiredDate: new Date(`${recommendation.requiredDate}T00:00:00.000Z`),
-            plannedReleaseDate: new Date(`${recommendation.plannedReleaseDate}T00:00:00.000Z`),
-            late: recommendation.late,
-            sources: { create: recommendation.sourceDemandIds.map((demandLineId) => ({ demandLineId })) },
-          },
-        });
-        void saved;
-      }
+      const bucketRows = result.buckets.map((bucket) => ({
+        id: crypto.randomUUID(),
+        runId: run.id,
+        itemId: bucket.itemId,
+        bucketDate: new Date(`${bucket.date}T00:00:00.000Z`),
+        grossRequirements: decimal(bucket.grossRequirements),
+        scheduledReceipts: decimal(bucket.scheduledReceipts),
+        projectedAvailable: decimal(bucket.projectedAvailable),
+        netRequirements: decimal(bucket.netRequirements),
+      }));
+      if (bucketRows.length > 0) await transaction.mrpBucket.createMany({ data: bucketRows });
+      result.buckets.forEach((bucket, index) => {
+        bucketsByKey.set(`${bucket.itemId}:${bucket.date}`, bucketRows[index]!.id);
+      });
+
+      const recommendationRows = result.recommendations.map((recommendation) => ({
+        id: crypto.randomUUID(),
+        runId: run.id,
+        bucketId: bucketsByKey.get(`${recommendation.itemId}:${recommendation.requiredDate}`) ?? null,
+        itemId: recommendation.itemId,
+        supplyType: recommendation.supplyType,
+        quantity: decimal(recommendation.quantity),
+        requiredDate: new Date(`${recommendation.requiredDate}T00:00:00.000Z`),
+        plannedReleaseDate: new Date(`${recommendation.plannedReleaseDate}T00:00:00.000Z`),
+        late: recommendation.late,
+      }));
+      if (recommendationRows.length > 0) await transaction.mrpRecommendation.createMany({ data: recommendationRows });
+      const sourceRows = result.recommendations.flatMap((recommendation, index) =>
+        [...new Set(recommendation.sourceDemandIds)].map((demandLineId) => ({
+          recommendationId: recommendationRows[index]!.id,
+          demandLineId,
+        })),
+      );
+      if (sourceRows.length > 0) await transaction.mrpRecommendationSource.createMany({ data: sourceRows });
       await transaction.auditLog.create({ data: { actorId, action: "mrp.run.completed", entityType: "MrpRun", entityId: run.id, source: "planning", metadata: { runNumber, bucketCount: result.buckets.length, recommendationCount: result.recommendations.length } } });
       return this.getMrpRun(run.id, transaction);
     });
