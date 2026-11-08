@@ -60,7 +60,8 @@ type ValuationRow = {
   warehouseCode: string;
   onHand: string;
   unitCost: string | null;
-  value: number;
+  valued: boolean;
+  value: number | null;
 };
 
 type Tab = "costs" | "inventory" | "wip";
@@ -169,14 +170,20 @@ export default function ReportsPage() {
           warehouseCode: row.warehouse.code,
           onHand: row.onHand,
           unitCost: row.averageUnitCost,
-          value: toNumber(row.onHand) * toNumber(row.averageUnitCost),
+          valued: row.averageUnitCost !== null,
+          value: row.averageUnitCost === null ? null : toNumber(row.onHand) * toNumber(row.averageUnitCost),
         }))
-        .sort((a, b) => b.value - a.value),
+        .sort((a, b) => (b.value ?? -1) - (a.value ?? -1)),
     [balances],
   );
 
   const inventoryTotal = useMemo(
-    () => valuationRows.reduce((sum, row) => sum + row.value, 0),
+    () => valuationRows.reduce((sum, row) => sum + (row.value ?? 0), 0),
+    [valuationRows],
+  );
+
+  const unvaluedCount = useMemo(
+    () => valuationRows.filter((row) => !row.valued).length,
     [valuationRows],
   );
 
@@ -208,7 +215,7 @@ export default function ReportsPage() {
         row.warehouseCode,
         row.onHand,
         row.unitCost ?? "",
-        row.value.toFixed(2),
+        row.value === null ? "" : row.value.toFixed(2),
       ]),
     );
   }
@@ -256,7 +263,7 @@ export default function ReportsPage() {
           tone={costTotals.variance > 0 ? "danger" : costTotals.variance < 0 ? "success" : "neutral"}
           value={formatMoney(costTotals.variance.toFixed(2))}
         />
-        <Stat label="Nilai inventori" hint="On hand × biaya rata-rata" value={formatMoney(inventoryTotal.toFixed(2))} />
+        <Stat label="Nilai inventori" hint={unvaluedCount > 0 ? `${unvaluedCount} saldo belum dinilai` : "On hand × biaya rata-rata"} value={formatMoney(inventoryTotal.toFixed(2))} />
       </StatGrid>
 
       <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-2">
@@ -392,32 +399,39 @@ export default function ReportsPage() {
             ) : valuationRows.length === 0 ? (
               <EmptyState title="Belum ada saldo stok bernilai" />
             ) : (
-              <Table>
-                <TableHead>
-                  <Tr>
-                    <Th>SKU</Th>
-                    <Th>Barang</Th>
-                    <Th>Gudang</Th>
-                    <Th align="right">On hand</Th>
-                    <Th align="right">Biaya rata-rata</Th>
-                    <Th align="right">Nilai</Th>
-                  </Tr>
-                </TableHead>
-                <TableBody>
-                  {valuationRows.map((row) => (
-                    <Tr key={row.key}>
-                      <Td className="tnum font-medium">{row.sku}</Td>
-                      <Td className="text-slate-600">{row.name}</Td>
-                      <Td className="tnum text-slate-600">{row.warehouseCode}</Td>
-                      <Td align="right" className="tnum text-slate-600">{formatQuantity(row.onHand)}</Td>
-                      <Td align="right" className="tnum text-slate-600">
-                        {row.unitCost ? formatMoney(row.unitCost) : "—"}
-                      </Td>
-                      <Td align="right" className="tnum font-medium text-slate-700">{formatMoney(row.value.toFixed(2))}</Td>
+              <>
+                {unvaluedCount > 0 ? (
+                  <div className="border-b border-amber-200 bg-amber-50 px-5 py-3 text-[13px] text-amber-800">
+                    {unvaluedCount} saldo belum memiliki biaya rata-rata, biasanya karena penerimaan produksi belum dinilai. Nilainya tidak dihitung dalam total.
+                  </div>
+                ) : null}
+                <Table>
+                  <TableHead>
+                    <Tr>
+                      <Th>SKU</Th>
+                      <Th>Barang</Th>
+                      <Th>Gudang</Th>
+                      <Th align="right">On hand</Th>
+                      <Th align="right">Biaya rata-rata</Th>
+                      <Th align="right">Nilai</Th>
                     </Tr>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHead>
+                  <TableBody>
+                    {valuationRows.map((row) => (
+                      <Tr key={row.key}>
+                        <Td className="tnum font-medium">{row.sku}</Td>
+                        <Td className="text-slate-600">{row.name}</Td>
+                        <Td className="tnum text-slate-600">{row.warehouseCode}</Td>
+                        <Td align="right" className="tnum text-slate-600">{formatQuantity(row.onHand)}</Td>
+                        <Td align="right" className="tnum text-slate-600">
+                          {row.unitCost ? formatMoney(row.unitCost) : <span className="text-amber-700">Belum dinilai</span>}
+                        </Td>
+                        <Td align="right" className="tnum font-medium text-slate-700">{row.value === null ? "—" : formatMoney(row.value.toFixed(2))}</Td>
+                      </Tr>
+                    ))}
+                  </TableBody>
+                </Table>
+              </>
             )}
           </CardBody>
         </Card>

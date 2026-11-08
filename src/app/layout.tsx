@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     default: "ManufactureOS",
     template: "%s · ManufactureOS",
   },
-  description: "Manufacturing ERP for discrete manufacturing: demand, BOM, MRP, procurement, inventory, production, quality and costing.",
+  description: "ERP manufaktur untuk produksi diskret: permintaan, BOM, MRP, pengadaan, inventori, produksi, kualitas, dan penetapan biaya.",
 };
 
 export default function RootLayout({
@@ -26,13 +26,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="id">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <a
           className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:shadow-lg"
           href="#main-content"
         >
-          Skip to content
+          Lewati ke konten
         </a>
         {children}
       </body>

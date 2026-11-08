@@ -440,7 +440,9 @@ export default function MaterialsPage() {
         <Alert tone="info">
           {detail.status === "DRAFT" || detail.status === "PLANNED"
             ? "Pesanan belum dirilis. Rilis pesanan produksi terlebih dahulu agar bahan dapat diterbitkan."
-            : `Pesanan berstatus ${detail.status}; penerbitan bahan baru tidak tersedia, namun konsumsi dan pengembalian masih dapat dicatat bila ada sisa WIP.`}
+            : detail.status === "COMPLETED" || detail.status === "CANCELLED"
+              ? `Pesanan berstatus ${detail.status}; seluruh transaksi bahan sudah ditutup.`
+              : `Pesanan berstatus ${detail.status}; penerbitan bahan baru tidak tersedia, namun konsumsi dan pengembalian masih dapat dicatat bila ada sisa WIP.`}
         </Alert>
       ) : null}
     </div>

@@ -75,6 +75,9 @@ Phase 7 — Deployment & end-to-end verification (in progress)
 - Production build: passed
 - Playwright E2E (`tests/e2e/complete-lifecycle.e2e.ts`): 1 passed
 - Production sign-in: HTTP 200, session cookie issued, **all 14 key pages return 200** (`/overview`, `/items`, `/boms/create`, `/engineering`, `/procurement`, `/planning`, `/manufacturing`, `/manufacturing/work-orders`, `/manufacturing/materials`, `/manufacturing/receipts`, `/quality`, `/inventory`, `/reports`, `/administration`)
+- Production transactional E2E (8 Nov 2026): released demand, MRP run (`MRP-PROD2-094326`, 10.5 s, 5 buckets / 2 recommendations), SA-001 MO completed (2 materials issued/consumed, work order + time entry, QC posted, production receipt 7), FG-001 MO completed (3 materials issued/consumed, work order + time entry, QC posted, production receipt 4), estimate + actual cost snapshots for all three completed MOs, and reports returned variance and valuation rows.
+- Serverless protection: all `/api/v1/**` route handlers export `maxDuration = 60`; serializable transactions use `maxWait 10 s` / `timeout 30 s` to absorb Neon latency.
+- Work-order execution is server-guarded: start requires `RELEASED`/`IN_PROGRESS` MO, while time entry, pause, and completion require `IN_PROGRESS`.
 
 ## UI/UX rework (completed)
 - UI diterjemahkan sepenuhnya ke **Bahasa Indonesia**: login, navigasi sidebar, semua halaman dashboard (overview, items, engineering/bom-explorer, planning, inventory, procurement, manufacturing, work-orders, receipts, quality, reports, administration, boms/create), tabel, form, badge status, dan alert
@@ -93,6 +96,7 @@ Phase 7 — Deployment & end-to-end verification (in progress)
 - Item deletion is intentionally not exposed; item lifecycle is limited to status changes because historical transactions reference items.
 - BOM draft line editing after creation is not exposed; drafts move forward through submit-review/approve/obsolete only.
 - Reporting is aggregated client-side over existing APIs; there is no server-side report endpoint or period selector.
+- Production receipts currently create unvalued FG/SA stock (`averageUnitCost` null) because costing is snapshotted after receipt. The valuation report marks these balances “Belum dinilai” and excludes them from the total; a cost-revaluation/finalization flow is still missing.
 - Root-cause variance drill-down (per material/labor line) is not implemented; the reports screen shows MO-level variance only.
 - Custom domain and preview-deployment protection rules are not configured.
 - E2E runs against whatever `DATABASE_URL` points at (currently Neon); there is no disposable-database variant of it.
@@ -102,11 +106,13 @@ Phase 7 — Deployment & end-to-end verification (in progress)
 - `src/lib/prisma.ts` selects the Neon adapter unless the connection string contains `localhost`/`127.0.0.1`.
 - BOM explosion accepts a caller-provided BOM catalog; repositories must select only approved/effective revisions before planning or MO release.
 - Dedicated UOM conversion administration service needed to keep stored conversions dimension-compatible.
+- MO material explosion expands MAKE subassemblies to leaf components, while MRP also plans child MAKE MOs. As a result, parent MOs do not consume subassembly stock. Decide whether parent MOs should stop at MAKE components (consuming SA-001) or MRP should suppress child MAKE recommendations when parent explosion already covers them.
 - Global git credential settings on this machine prompt for a different GitHub identity; pushes use an explicit token URL.
 
 ## Next slice
 1. Add count/consistency assertions for the RBAC seed.
 2. Add period filters and a server-side report endpoint; add per-material/per-labor variance drill-down.
-3. Add editable BOM drafts and an explicit item lifecycle audit view.
-4. Add a disposable-database E2E job to CI.
-5. Add a custom domain and decide preview-deployment protection.
+3. Add production-receipt cost revaluation so FG/SA balances receive an average unit cost after actual costing.
+4. Add editable BOM drafts and an explicit item lifecycle audit view.
+5. Add a disposable-database E2E job to CI.
+6. Add a custom domain and decide preview-deployment protection.
