@@ -39,3 +39,5 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ error: { code: "INVALID_INPUT", message: "type must be ESTIMATE or ACTUAL" } }, { status: 400 });
   } catch (error) { return errorResponse(error); }
 }
+
+export const maxDuration = 60;

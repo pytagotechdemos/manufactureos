@@ -9,3 +9,5 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
     return NextResponse.json({ data: await quality.postInspection(access.user.id, id) });
   } catch (error) { return qualityErrorResponse(error); }
 }
+
+export const maxDuration = 60;

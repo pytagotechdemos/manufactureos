@@ -12,3 +12,5 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     return bomErrorResponse(error);
   }
 }
+
+export const maxDuration = 60;

@@ -11,3 +11,5 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     return NextResponse.json({ data: await workOrders.assignWorkCenter(access.user.id, id, await request.json()) });
   } catch (error) { return workOrderErrorResponse(error); }
 }
+
+export const maxDuration = 60;

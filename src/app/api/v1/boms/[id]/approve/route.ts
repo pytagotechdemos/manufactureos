@@ -11,3 +11,5 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
     return bomErrorResponse(error);
   }
 }
+
+export const maxDuration = 60;

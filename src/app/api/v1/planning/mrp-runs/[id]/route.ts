@@ -9,3 +9,5 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ data: await planning.getMrpRun(id) });
   } catch (error) { return planningErrorResponse(error); }
 }
+
+export const maxDuration = 60;

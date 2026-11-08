@@ -72,3 +72,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: { code: "INTERNAL_ERROR", message: "Request failed" } }, { status: 500 });
   }
 }
+
+export const maxDuration = 60;

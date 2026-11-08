@@ -10,3 +10,5 @@ export async function GET() {
     return inventoryErrorResponse(error);
   }
 }
+
+export const maxDuration = 60;

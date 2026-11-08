@@ -9,3 +9,5 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ data: await workOrders.recordTime(access.user.id, id, await request.json()) }, { status: 201 });
   } catch (error) { return workOrderErrorResponse(error); }
 }
+
+export const maxDuration = 60;

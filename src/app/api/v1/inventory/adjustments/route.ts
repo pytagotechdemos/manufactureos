@@ -10,3 +10,5 @@ export async function POST(request: Request) {
     return inventoryErrorResponse(error);
   }
 }
+
+export const maxDuration = 60;

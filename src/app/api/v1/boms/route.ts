@@ -22,3 +22,5 @@ export async function POST(request: Request) {
     return bomErrorResponse(error);
   }
 }
+
+export const maxDuration = 60;

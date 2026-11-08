@@ -22,3 +22,5 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     return bomErrorResponse(error);
   }
 }
+
+export const maxDuration = 60;

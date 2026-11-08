@@ -29,3 +29,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ data: await workCenters.create(user.id, await request.json()) }, { status: 201 });
   } catch (error) { return errorResponse(error); }
 }
+
+export const maxDuration = 60;

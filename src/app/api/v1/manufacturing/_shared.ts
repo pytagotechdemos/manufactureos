@@ -24,5 +24,6 @@ export function manufacturingErrorResponse(error: unknown) {
     return NextResponse.json({ error: { code: error.code, message: error.message } }, { status });
   }
   if (error instanceof Error && error.message === "FORBIDDEN") return NextResponse.json({ error: { code: "FORBIDDEN", message: "Permission denied" } }, { status: 403 });
+  console.error("Manufacturing API error", error);
   return NextResponse.json({ error: { code: "INTERNAL_ERROR", message: "Request failed" } }, { status: 500 });
 }

@@ -12,3 +12,5 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ data: await manufacturing.issueMaterial(access.user.id, id, materialId, await request.json()) });
   } catch (error) { return manufacturingErrorResponse(error); }
 }
+
+export const maxDuration = 60;

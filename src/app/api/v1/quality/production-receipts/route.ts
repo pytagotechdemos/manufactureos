@@ -8,3 +8,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ data: await quality.postProductionReceipt(access.user.id, await request.json()) }, { status: 201 });
   } catch (error) { return qualityErrorResponse(error); }
 }
+
+export const maxDuration = 60;

@@ -9,3 +9,5 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
     return NextResponse.json({ data: await planning.releaseDemand(access.user.id, id) });
   } catch (error) { return planningErrorResponse(error); }
 }
+
+export const maxDuration = 60;

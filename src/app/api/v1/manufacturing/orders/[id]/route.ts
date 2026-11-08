@@ -9,3 +9,5 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ data: await manufacturing.get(id) });
   } catch (error) { return manufacturingErrorResponse(error); }
 }
+
+export const maxDuration = 60;

@@ -8,3 +8,5 @@ export async function GET() {
     return NextResponse.json({ data: await quality.pendingOrders() });
   } catch (error) { return qualityErrorResponse(error); }
 }
+
+export const maxDuration = 60;
