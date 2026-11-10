@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Decimal from "decimal.js";
 import { X, History, Layers, Package, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
@@ -91,7 +92,7 @@ interface ItemDetailData {
 }
 
 const actionLabels: Record<string, { label: string; tone: Tone }> = {
-  "item.created": { label: "Barang Dibuat", tone: "info" },
+  "item.created": { label: "Item Dibuat", tone: "info" },
   "item.updated": { label: "Data Diperbarui", tone: "warning" },
   "item.activated": { label: "Diaktifkan", tone: "success" },
   "item.deactivated": { label: "Dinonaktifkan", tone: "danger" },
@@ -119,13 +120,13 @@ export function ItemLifecycleModal({
       try {
         const res = await fetch(`/api/v1/items/${itemId}`);
         const json = await res.json().catch(() => null);
-        if (!res.ok) throw new Error(json?.error?.message ?? "Gagal memuat detail barang");
+        if (!res.ok) throw new Error(json?.error?.message ?? "Gagal memuat detail item");
         if (!cancelled) {
           setData(json.data);
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Gagal memuat detail barang");
+          setError(err instanceof Error ? err.message : "Gagal memuat detail item");
         }
       } finally {
         if (!cancelled) {
@@ -138,6 +139,22 @@ export function ItemLifecycleModal({
       cancelled = true;
     };
   }, [itemId]);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
+  useEffect(() => {
+    const original = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = original;
+    };
+  }, []);
 
   function exportAuditCsv() {
     if (!data) return;
@@ -168,18 +185,28 @@ export function ItemLifecycleModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-      <div className="flex flex-col w-full max-w-4xl max-h-[90vh] bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="item-lifecycle-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
+    >
+      <div
+        aria-hidden="true"
+        className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
+        onClick={onClose}
+      />
+      <div className="relative z-10 flex flex-col w-full max-w-4xl max-h-[90vh] bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden my-auto">
         {/* Header */}
         <div className="flex items-start justify-between p-5 border-b border-slate-200 bg-slate-50/75">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Siklus Hidup & Audit Log Barang
+                Siklus Hidup & Audit Log Item
               </span>
               {data ? <StatusBadge status={data.item.status} /> : null}
             </div>
-            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <h2 id="item-lifecycle-title" className="text-lg font-bold text-slate-900 flex items-center gap-2">
               <span className="font-mono text-brand-600">{data?.item.sku ?? itemSku}</span>
               {data?.item.name ? <span>— {data.item.name}</span> : null}
             </h2>
@@ -191,7 +218,7 @@ export function ItemLifecycleModal({
                 <span>•</span>
                 <span>Tipe: <strong className="text-slate-700">{humanize(data.item.itemType)}</strong></span>
                 <span>•</span>
-                <span>Pengadaan: <strong className="text-slate-700">{humanize(data.item.supplyType)}</strong></span>
+                <span>Supply Type: <strong className="text-slate-700">{humanize(data.item.supplyType)}</strong></span>
               </div>
             ) : null}
           </div>
@@ -206,12 +233,12 @@ export function ItemLifecycleModal({
         </div>
 
         {/* Modal Tabs */}
-        <div className="flex items-center justify-between border-b border-slate-200 px-5 pt-2 bg-slate-50/40">
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 pt-2 bg-slate-50/40 overflow-x-auto scroll-area">
           <div className="flex gap-4">
             <button
               type="button"
               onClick={() => setTab("audit")}
-              className={`flex items-center gap-1.5 pb-2.5 text-sm font-semibold border-b-2 transition ${
+              className={`flex items-center gap-1.5 pb-2.5 text-sm font-semibold border-b-2 transition shrink-0 whitespace-nowrap ${
                 tab === "audit"
                   ? "border-brand-600 text-brand-600"
                   : "border-transparent text-slate-500 hover:text-slate-800"
@@ -223,19 +250,19 @@ export function ItemLifecycleModal({
             <button
               type="button"
               onClick={() => setTab("inventory")}
-              className={`flex items-center gap-1.5 pb-2.5 text-sm font-semibold border-b-2 transition ${
+              className={`flex items-center gap-1.5 pb-2.5 text-sm font-semibold border-b-2 transition shrink-0 whitespace-nowrap ${
                 tab === "inventory"
                   ? "border-brand-600 text-brand-600"
                   : "border-transparent text-slate-500 hover:text-slate-800"
               }`}
             >
               <Package className="size-4" />
-              Saldo Persediaan ({data?.item.stockBalances.length ?? 0})
+              Saldo Stock & Inventory ({data?.item.stockBalances.length ?? 0})
             </button>
             <button
               type="button"
               onClick={() => setTab("bom")}
-              className={`flex items-center gap-1.5 pb-2.5 text-sm font-semibold border-b-2 transition ${
+              className={`flex items-center gap-1.5 pb-2.5 text-sm font-semibold border-b-2 transition shrink-0 whitespace-nowrap ${
                 tab === "bom"
                   ? "border-brand-600 text-brand-600"
                   : "border-transparent text-slate-500 hover:text-slate-800"
@@ -267,13 +294,13 @@ export function ItemLifecycleModal({
           {loading ? (
             <div className="py-12 text-center text-slate-500">Memuat data siklus hidup…</div>
           ) : !data ? (
-            <EmptyState title="Data tidak ditemukan" description="Detail barang tidak dapat dimuat." />
+            <EmptyState title="Data tidak ditemukan" description="Detail item tidak dapat dimuat." />
           ) : tab === "audit" ? (
             <div>
               {data.auditLogs.length === 0 ? (
                 <EmptyState
                   title="Belum ada riwayat audit"
-                  description="Aktivitas pembuatan dan modifikasi barang akan tercatat otomatis di sini."
+                  description="Aktivitas pembuatan dan modifikasi item akan tercatat otomatis di sini."
                 />
               ) : (
                 <Table>
@@ -338,8 +365,8 @@ export function ItemLifecycleModal({
             <div className="space-y-4">
               {data.item.stockBalances.length === 0 ? (
                 <EmptyState
-                  title="Belum ada saldo persediaan"
-                  description="Barang ini belum memiliki catatan saldo stok di gudang manapun."
+                  title="Belum ada saldo inventory"
+                  description="Item ini belum memiliki catatan saldo stok di gudang manapun."
                 />
               ) : (
                 <Table>
@@ -357,10 +384,10 @@ export function ItemLifecycleModal({
                   </TableHead>
                   <TableBody>
                     {data.item.stockBalances.map((bal) => {
-                      const onHand = Number(bal.onHand);
-                      const reserved = Number(bal.reserved);
-                      const blocked = Number(bal.blocked);
-                      const available = Math.max(0, onHand - reserved - blocked);
+                      const available = Decimal.max(
+                        0,
+                        new Decimal(bal.onHand).minus(bal.reserved).minus(bal.blocked),
+                      ).toString();
 
                       return (
                         <Tr key={bal.id}>
@@ -407,7 +434,7 @@ export function ItemLifecycleModal({
                   <Badge tone="neutral">{data.item.bomOutputs.length}</Badge>
                 </h3>
                 {data.item.bomOutputs.length === 0 ? (
-                  <p className="text-xs text-slate-500 italic">Barang ini tidak memiliki BOM sebagai produk jadi/sub-assembly.</p>
+                  <p className="text-xs text-slate-500 italic">Item ini tidak memiliki BOM sebagai produk jadi/sub-assembly.</p>
                 ) : (
                   <Table>
                     <TableHead>
@@ -447,16 +474,17 @@ export function ItemLifecycleModal({
                   <Badge tone="neutral">{data.item.bomComponents.length}</Badge>
                 </h3>
                 {data.item.bomComponents.length === 0 ? (
-                  <p className="text-xs text-slate-500 italic">Barang ini tidak digunakan dalam BOM barang lain.</p>
+                  <p className="text-xs text-slate-500 italic">Item ini tidak digunakan dalam BOM produk lain.</p>
                 ) : (
                   <Table>
                     <TableHead>
                       <Tr>
                         <Th className="w-[140px]">Nomor BOM</Th>
                         <Th>Produk Induk</Th>
-                        <Th className="w-[90px]">Revisi</Th>
+                        <Th className="w-[80px]">Revisi</Th>
+                        <Th align="right" className="w-[110px]">Kuantitas</Th>
+                        <Th align="right" className="w-[90px]">Scrap</Th>
                         <Th className="w-[110px]">Status BOM</Th>
-                        <Th align="right" className="w-[90px]">Satuan</Th>
                       </Tr>
                     </TableHead>
                     <TableBody>
@@ -467,10 +495,15 @@ export function ItemLifecycleModal({
                             {line.bom.outputItem.sku} — {line.bom.outputItem.name}
                           </Td>
                           <Td className="text-xs font-medium text-slate-700">{line.bom.revision}</Td>
+                          <Td align="right" className="tnum font-medium text-slate-900 text-xs">
+                            {formatQuantity(line.quantity)} {line.uom.code}
+                          </Td>
+                          <Td align="right" className="tnum text-slate-600 text-xs">
+                            {Number(line.scrapRate) > 0 ? `${(Number(line.scrapRate) * 100).toFixed(1)}%` : "0%"}
+                          </Td>
                           <Td>
                             <StatusBadge status={line.bom.status} />
                           </Td>
-                          <Td align="right" className="text-xs text-slate-600">{line.uom.code}</Td>
                         </Tr>
                       ))}
                     </TableBody>

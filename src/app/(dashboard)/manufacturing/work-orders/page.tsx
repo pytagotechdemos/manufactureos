@@ -152,14 +152,14 @@ export default function WorkOrdersPage() {
     const headers = [
       "Nomor WO",
       "Nomor MO",
-      "SKU Barang",
-      "Nama Barang",
+      "SKU Item",
+      "Nama Item",
       "Operasi",
       "Work Center",
       "Status",
-      "Target",
-      "Selesai",
-      "Reject",
+      "Target Qty",
+      "Completed Qty",
+      "Rejected Qty",
       "Total Menit",
       "Waktu Mulai",
       "Waktu Selesai",
@@ -184,7 +184,7 @@ export default function WorkOrdersPage() {
         order.completedAt ? formatDateTime(order.completedAt) : "",
       ];
     });
-    downloadCsv(`daftar-work-orders-${todayJakarta()}.csv`, headers, rows);
+    downloadCsv(`work-orders-${todayJakarta()}.csv`, headers, rows);
   }
 
   const selectedOrder = orders.find((order) => order.id === selectedId) ?? null;
@@ -464,7 +464,7 @@ export default function WorkOrdersPage() {
                 description={
                   search || filter !== "SEMUA"
                     ? "Tidak ada Work Order cocok dengan kriteria filter."
-                    : "Rilis pesanan produksi terlebih dahulu di halaman Produksi."
+                    : "Rilis Manufacturing Order (MO) terlebih dahulu di modul Manufacturing."
                 }
               />
             ) : (
@@ -477,9 +477,9 @@ export default function WorkOrdersPage() {
                       <Th className="w-[110px]">Operasi</Th>
                       <Th className="w-[110px]">Work Center</Th>
                       <Th className="w-[90px]">Status</Th>
-                      <Th align="right" className="w-[80px]">Target</Th>
-                      <Th align="right" className="w-[80px]">Selesai</Th>
-                      <Th align="right" className="w-[70px]">Reject</Th>
+                      <Th align="right" className="w-[80px]">Target Qty</Th>
+                      <Th align="right" className="w-[80px]">Completed</Th>
+                      <Th align="right" className="w-[70px]">Rejected</Th>
                       <Th align="right" className="w-[70px]">Menit</Th>
                       <Th align="right" className="w-[90px]">Aksi</Th>
                     </Tr>
@@ -540,7 +540,7 @@ export default function WorkOrdersPage() {
                     <dd><StatusBadge status={selectedOrder.status} /></dd>
                   </div>
                   <div>
-                    <dt className="text-slate-500">Barang</dt>
+                    <dt className="text-slate-500">Item / Produk</dt>
                     <dd className="text-slate-800">{selectedOrder.manufacturingOrder.item.name}</dd>
                   </div>
                   <div>
@@ -618,7 +618,7 @@ export default function WorkOrdersPage() {
                     </form>
 
                     <form className="space-y-3 border-t border-slate-200 pt-4" onSubmit={handleComplete}>
-                      <Field label="Kuantitas selesai" required hint={`Sisa target: ${formatQuantity(remainingTarget.toString())}. Total selesai + reject tidak boleh melebihi sisa target.`}>
+                      <Field label="Kuantitas selesai (Completed)" required hint={`Sisa target: ${formatQuantity(remainingTarget.toString())}. Total selesai + reject tidak boleh melebihi sisa target.`}>
                         <Input
                           type="number"
                           min="0.000001"
@@ -629,7 +629,7 @@ export default function WorkOrdersPage() {
                           onChange={(event) => setCompletedQty(event.target.value)}
                         />
                       </Field>
-                      <Field label="Kuantitas reject">
+                      <Field label="Kuantitas reject (Scrap)">
                         <Input
                           type="number"
                           min="0"

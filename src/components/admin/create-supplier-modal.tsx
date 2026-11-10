@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,24 @@ export function CreateSupplierModal() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") handleClose();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const original = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = original;
+    };
+  }, [open]);
 
   function handleClose() {
     setOpen(false);
@@ -44,8 +62,8 @@ export function CreateSupplierModal() {
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error?.message || "Gagal membuat data pemasok");
-      setNotice(`Pemasok ${json.data.name} (${json.data.code}) berhasil ditambahkan.`);
+      if (!res.ok) throw new Error(json.error?.message || "Gagal membuat data supplier");
+      setNotice(`Supplier ${json.data.name} (${json.data.code}) berhasil ditambahkan.`);
       setCode("");
       setName("");
       setEmail("");
@@ -53,7 +71,7 @@ export function CreateSupplierModal() {
       setAddress("");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal membuat data pemasok");
+      setError(err instanceof Error ? err.message : "Gagal membuat data supplier");
     } finally {
       setSubmitting(false);
     }
@@ -67,19 +85,19 @@ export function CreateSupplierModal() {
         type="button"
         variant="primary"
       >
-        <Plus aria-hidden className="size-4 mr-2" />
-        Tambah pemasok
+        <Plus aria-hidden className="size-4" />
+        Tambah supplier
       </Button>
 
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
           <div
             aria-hidden="true"
             className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
             onClick={handleClose}
           />
-          <div className="relative z-10 w-full max-w-lg">
-            <Card className="shadow-2xl">
+          <div className="relative z-10 w-full max-w-lg my-auto">
+            <Card className="shadow-2xl max-h-[90vh] flex flex-col">
               <CardHeader
                 actions={
                   <button
@@ -91,15 +109,15 @@ export function CreateSupplierModal() {
                     <X aria-hidden className="size-4" />
                   </button>
                 }
-                description="Pemasok digunakan dalam pembuatan pesanan pembelian (PO) dan permintaan pembelian (PR)."
-                title="Tambah Pemasok Baru"
+                description="Supplier / Vendor digunakan dalam penerbitan Purchase Order (PO) dan Purchase Request (PR)."
+                title="Tambah Supplier Baru"
               />
-              <CardBody className="space-y-4">
+              <CardBody className="space-y-4 overflow-y-auto">
                 {error ? <Alert tone="danger" onClose={() => setError(null)}>{error}</Alert> : null}
                 {notice ? <Alert tone="success" onClose={() => setNotice(null)}>{notice}</Alert> : null}
                 <form className="space-y-3" onSubmit={handleSubmit}>
                   <div className="grid grid-cols-2 gap-3">
-                    <Field htmlFor="create-supplier-code" label="Kode pemasok" required>
+                    <Field htmlFor="create-supplier-code" label="Kode supplier" required>
                       <Input
                         id="create-supplier-code"
                         name="code"
@@ -109,7 +127,7 @@ export function CreateSupplierModal() {
                         value={code}
                       />
                     </Field>
-                    <Field htmlFor="create-supplier-name" label="Nama pemasok / vendor" required>
+                    <Field htmlFor="create-supplier-name" label="Nama supplier / vendor" required>
                       <Input
                         id="create-supplier-name"
                         name="name"
@@ -156,8 +174,8 @@ export function CreateSupplierModal() {
                       Batal
                     </Button>
                     <Button disabled={submitting || !code.trim() || !name.trim()} loading={submitting} type="submit" variant="primary">
-                      <Plus aria-hidden className="size-4 mr-2" />
-                      Simpan pemasok
+                      <Plus aria-hidden className="size-4" />
+                      Simpan supplier
                     </Button>
                   </div>
                 </form>

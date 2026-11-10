@@ -85,7 +85,7 @@ export default function ManufacturingPage() {
         fetch("/api/v1/warehouses"),
         fetch("/api/v1/planning/mrp-runs"),
       ]);
-      if (!moRes.ok || !whRes.ok || !runRes.ok) throw new Error("Gagal memuat data produksi");
+      if (!moRes.ok || !whRes.ok || !runRes.ok) throw new Error("Gagal memuat data Manufacturing Order");
       const [moJson, whJson, runJson] = await Promise.all([moRes.json(), whRes.json(), runRes.json()]);
       const allOrders = [...(moJson.data ?? [])];
       const totalOrders = Number(moJson.page?.total ?? allOrders.length);
@@ -93,7 +93,7 @@ export default function ManufacturingPage() {
       for (let index = 0; index < orderOffsets.length; index += 10) {
         const pages = await Promise.all(orderOffsets.slice(index, index + 10).map(async (offset) => {
           const response = await fetch(`/api/v1/manufacturing/orders?limit=100&offset=${offset}`);
-          if (!response.ok) throw new Error("Gagal memuat seluruh pesanan produksi");
+          if (!response.ok) throw new Error("Gagal memuat seluruh Manufacturing Order (MO)");
           return response.json();
         }));
         allOrders.push(...pages.flatMap((page) => page.data ?? []));
@@ -104,7 +104,7 @@ export default function ManufacturingPage() {
       setRuns(runRows);
       setSelectedRunId((current) => (current || runRows[0]?.id || ""));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memuat data produksi");
+      setError(err instanceof Error ? err.message : "Gagal memuat data Manufacturing Order");
     } finally {
       setLoading(false);
     }
@@ -175,8 +175,8 @@ export default function ManufacturingPage() {
 
   function exportOrdersCsv() {
     downloadCsv(
-      `pesanan-produksi-${todayJakarta()}.csv`,
-      ["Nomor MO", "SKU", "Nama Barang", "Kuantitas", "Status", "Waktu Dibuat"],
+      `manufacturing-orders-${todayJakarta()}.csv`,
+      ["Nomor MO", "SKU Item", "Nama Item", "Target Quantity", "Status", "Waktu Dibuat"],
       filteredOrders.map((order) => [
         order.number,
         order.item.sku,
@@ -242,15 +242,15 @@ export default function ManufacturingPage() {
         }),
       });
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal membuat pesanan produksi");
-      setNotice(`Pesanan produksi ${json?.data?.number ?? ""} berhasil dibuat.`);
+      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal membuat Manufacturing Order");
+      setNotice(`Manufacturing Order (MO) ${json?.data?.number ?? ""} berhasil dibuat.`);
       setFormNumber("");
       setFormRecommendationId("");
       setFormWarehouseId("");
       setFormWipWarehouseId("");
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal membuat pesanan produksi");
+      setError(err instanceof Error ? err.message : "Gagal membuat Manufacturing Order");
     } finally {
       setSaving(false);
     }
@@ -262,32 +262,32 @@ export default function ManufacturingPage() {
     try {
       const res = await fetch(`/api/v1/manufacturing/orders/${order.id}/${action}`, { method: "POST" });
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error?.message ?? "Aksi pesanan produksi gagal");
+      if (!res.ok) throw new Error(json?.error?.message ?? "Aksi Manufacturing Order gagal");
       setNotice(
         action === "plan" ? (
-          `${order.number} direncanakan.`
+          `${order.number} direncanakan (PLANNED).`
         ) : (
           <span>
-            {order.number} dirilis dan bahan dipesan.{" "}
+            {order.number} dirilis (RELEASED) dan material dialokasikan.{" "}
             <Link
               href={`/manufacturing/materials?mo=${order.number}`}
               className="ml-1 font-semibold underline underline-offset-2 hover:text-emerald-950"
             >
-              Terbitkan bahan ke WIP &rarr;
+              Terbitkan material ke WIP &rarr;
             </Link>
           </span>
         ),
       );
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Aksi pesanan produksi gagal");
+      setError(err instanceof Error ? err.message : "Aksi Manufacturing Order gagal");
     } finally {
       setActingId(null);
     }
   }
 
   async function handleCancelMo(order: MoRow) {
-    if (!window.confirm(`Batalkan pesanan produksi ${order.number}? Reservasi material akan dilepas jika belum dikeluarkan.`)) {
+    if (!window.confirm(`Batalkan Manufacturing Order (MO) ${order.number}? Reservasi material akan dilepas jika belum dikeluarkan.`)) {
       return;
     }
     setActingId(order.id);
@@ -299,11 +299,11 @@ export default function ManufacturingPage() {
         body: JSON.stringify({ reason: "Dibatalkan oleh pengguna" }),
       });
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal membatalkan pesanan produksi");
-      setNotice(`Pesanan produksi ${order.number} berhasil dibatalkan.`);
+      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal membatalkan Manufacturing Order");
+      setNotice(`Manufacturing Order (MO) ${order.number} berhasil dibatalkan.`);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal membatalkan pesanan produksi");
+      setError(err instanceof Error ? err.message : "Gagal membatalkan Manufacturing Order");
     } finally {
       setActingId(null);
     }
@@ -314,7 +314,7 @@ export default function ManufacturingPage() {
       <PageHeader
         eyebrow="Shop Floor & Manufacturing"
         title="Manufacturing Orders (MO)"
-        description="Pesanan produksi dibuat dari rekomendasi MRP, lalu direncanakan dan dirilis ke lantai produksi."
+        description="Manufacturing Order (MO) dibuat dari rekomendasi MRP, lalu direncanakan dan dirilis ke lantai produksi."
         actions={
           <Button variant="secondary" onClick={() => { void load(); }} loading={loading}>
             Muat ulang
@@ -340,7 +340,7 @@ export default function ManufacturingPage() {
                   size="sm"
                   onClick={exportOrdersCsv}
                   disabled={filteredOrders.length === 0}
-                  title="Unduh daftar pesanan produksi sebagai file CSV"
+                  title="Unduh daftar Manufacturing Orders (MO) sebagai file CSV"
                 >
                   <Download aria-hidden className="size-3.5" />
                   Ekspor CSV
@@ -357,7 +357,7 @@ export default function ManufacturingPage() {
                 description={
                   search
                     ? "Coba ubah kata kunci pencarian Anda."
-                    : "Jalankan MRP di Perencanaan, lalu buat MO dari rekomendasi MAKE."
+                    : "Jalankan MRP di menu Planning & MRP, lalu buat MO dari rekomendasi MAKE."
                 }
               />
             ) : (
@@ -370,7 +370,7 @@ export default function ManufacturingPage() {
                       <Th align="right" className="w-[100px]">Target Qty</Th>
                       <Th className="w-[110px]">Status</Th>
                       <Th align="right" className="w-[140px]">Tanggal Dibuat</Th>
-                      <Th align="right" className="w-[180px]">Aksi</Th>
+                      <Th align="right" className="w-[220px]">Aksi</Th>
                     </Tr>
                   </TableHead>
                   <TableBody>
@@ -510,8 +510,8 @@ export default function ManufacturingPage() {
 
         <Card>
           <CardHeader
-            title="Buat dari rekomendasi MRP"
-            description="Hanya rekomendasi MAKE yang belum memiliki MO."
+            title="Buat dari Rekomendasi MRP"
+            description="Konversi rekomendasi MAKE dari kalkulasi MRP menjadi Manufacturing Order aktif."
           />
           <CardBody>
             <form className="space-y-4" onSubmit={handleCreateMo}>
@@ -525,11 +525,11 @@ export default function ManufacturingPage() {
                   ))}
                 </Select>
               </Field>
-              <Field label="Nomor MO" required hint="Kosongkan untuk nomor otomatis.">
+              <Field label="Nomor MO" required hint="Kosongkan untuk penomoran otomatis.">
                 <Input placeholder={suggestNumber()} value={formNumber} onChange={(event) => setFormNumber(event.target.value)} />
               </Field>
               <Field
-                label="Rekomendasi"
+                label="Rekomendasi MAKE"
                 required
                 hint={
                   runLoading
@@ -562,7 +562,7 @@ export default function ManufacturingPage() {
                   </p>
                 </div>
               ) : null}
-              <Field label="Gudang sumber bahan" required>
+              <Field label="Gudang Sumber Material" required>
                 <Select required value={formWarehouseId} onChange={(event) => setFormWarehouseId(event.target.value)}>
                   <option value="">Pilih gudang</option>
                   {nonWip.map((warehouse) => (
@@ -572,7 +572,7 @@ export default function ManufacturingPage() {
                   ))}
                 </Select>
               </Field>
-              <Field label="Gudang WIP" required>
+              <Field label="Warehouse WIP" required>
                 <Select required value={formWipWarehouseId} onChange={(event) => setFormWipWarehouseId(event.target.value)}>
                   <option value="">Pilih gudang WIP</option>
                   {wip.map((warehouse) => (
@@ -588,9 +588,8 @@ export default function ManufacturingPage() {
               <p className="text-[12px] text-slate-500">
                 Belum ada run MRP?{" "}
                 <Link className="font-medium text-brand-700 hover:underline" href="/planning">
-                  Jalankan di Perencanaan
+                  Jalankan di Planning & MRP &rarr;
                 </Link>
-                .
               </p>
             </form>
           </CardBody>

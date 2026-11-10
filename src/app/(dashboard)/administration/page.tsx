@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Administrasi",
+  title: "Administrasi Sistem",
 };
 
 export default async function AdministrationPage() {
@@ -196,13 +196,13 @@ export default async function AdministrationPage() {
         description="Kelola hak akses pengguna, master kategori, satuan (UOM), work center, gudang, supplier, dan audit trail log."
       />
 
-      <StatGrid>
-        <Stat label="Pengguna" hint={`${activeUsers} aktif`} value={users.length} />
+      <StatGrid className="lg:grid-cols-3 xl:grid-cols-6">
+        <Stat label="Users" hint={`${activeUsers} aktif`} value={users.length} />
         <Stat label="Kategori" hint={`${activeCategories} aktif`} value={categories.length} />
         <Stat label="Satuan (UOM)" hint={`${activeUoms} aktif`} value={uoms.length} />
-        <Stat label="Work Center" hint={`${activeWorkCenters} aktif`} value={workCenters.length} />
-        <Stat label="Gudang" hint={`${activeWarehouses} aktif`} value={warehouses.length} />
-        <Stat label="Pemasok" hint={`${activeSuppliers} aktif`} value={suppliers.length} />
+        <Stat label="Work Centers" hint={`${activeWorkCenters} aktif`} value={workCenters.length} />
+        <Stat label="Warehouses" hint={`${activeWarehouses} aktif`} value={warehouses.length} />
+        <Stat label="Suppliers" hint={`${activeSuppliers} aktif`} value={suppliers.length} />
       </StatGrid>
 
       <Tabs defaultValue="users">
@@ -210,43 +210,43 @@ export default async function AdministrationPage() {
           <Tab count={users.length} value="users">
             <span className="flex items-center gap-1.5">
               <Users aria-hidden className="size-4" />
-              Pengguna & Peran
+              Users & Roles
             </span>
           </Tab>
           <Tab count={categories.length} value="categories">
             <span className="flex items-center gap-1.5">
               <FolderTree aria-hidden className="size-4" />
-              Kategori Barang
+              Kategori Item
             </span>
           </Tab>
           <Tab count={uoms.length} value="uoms">
             <span className="flex items-center gap-1.5">
               <Ruler aria-hidden className="size-4" />
-              Satuan Ukuran
+              Satuan (UOM)
             </span>
           </Tab>
           <Tab count={workCenters.length} value="workCenters">
             <span className="flex items-center gap-1.5">
               <Factory aria-hidden className="size-4" />
-              Pusat Kerja (Work Center)
+              Work Centers
             </span>
           </Tab>
           <Tab count={warehouses.length} value="warehouses">
             <span className="flex items-center gap-1.5">
               <Warehouse aria-hidden className="size-4" />
-              Gudang
+              Warehouses
             </span>
           </Tab>
           <Tab count={suppliers.length} value="suppliers">
             <span className="flex items-center gap-1.5">
               <Building2 aria-hidden className="size-4" />
-              Pemasok
+              Suppliers
             </span>
           </Tab>
           <Tab count={recentAuditLogs.length} value="audit">
             <span className="flex items-center gap-1.5">
               <History aria-hidden className="size-4" />
-              Log Audit
+              Audit Logs
             </span>
           </Tab>
         </TabList>
@@ -287,7 +287,7 @@ export default async function AdministrationPage() {
                         <Th>Peran</Th>
                         <Th className="w-[110px]">Status</Th>
                         <Th className="w-[120px]">Dibuat</Th>
-                        <Th align="right" className="w-[100px]">Aksi</Th>
+                        <Th align="right" className="w-[110px]">Aksi</Th>
                       </Tr>
                     </TableHead>
                     <TableBody>
@@ -351,7 +351,7 @@ export default async function AdministrationPage() {
           </div>
         </TabPanel>
 
-        {/* Tab 2: Kategori Barang */}
+        {/* Tab 2: Kategori Item */}
         <TabPanel value="categories">
           <div className="mt-5">
             <Card>
@@ -359,8 +359,8 @@ export default async function AdministrationPage() {
                 actions={
                   <div className="flex items-center gap-2">
                     <ExportCsvButton
-                      filename={`kategori-barang-${todayJakarta()}.csv`}
-                      headers={["Kode", "Nama", "Total Barang", "Status", "Tanggal Dibuat"]}
+                      filename={`item-categories-${todayJakarta()}.csv`}
+                      headers={["Kode Kategori", "Nama Kategori", "Total Item", "Status", "Tanggal Dibuat"]}
                       rows={categories.map((c) => [
                         c.code,
                         c.name,
@@ -372,22 +372,22 @@ export default async function AdministrationPage() {
                     <CreateCategoryModal />
                   </div>
                 }
-                description="Klasifikasi dan taksonomi master barang untuk filtering inventaris, BOM, dan pelaporan."
-                title="Daftar Kategori Barang (Item Categories)"
+                description="Klasifikasi dan taksonomi Item Master untuk filtering inventory, BOM, dan pelaporan."
+                title="Daftar Kategori Item (Item Categories)"
               />
               <CardBody className="p-0">
                 {categories.length === 0 ? (
-                  <EmptyState icon={<FolderTree aria-hidden className="size-5" />} title="Belum ada kategori barang" />
+                  <EmptyState icon={<FolderTree aria-hidden className="size-5" />} title="Belum ada kategori item" />
                 ) : (
                   <Table>
                     <TableHead>
                       <Tr>
                         <Th className="w-[150px]">Kode Kategori</Th>
                         <Th>Nama Kategori</Th>
-                        <Th align="right" className="w-[160px]">Total Barang Terkait</Th>
+                        <Th align="right" className="w-[160px]">Total Item Terkait</Th>
                         <Th className="w-[110px]">Status</Th>
                         <Th className="w-[120px]">Dibuat</Th>
-                        <Th align="right" className="w-[100px]">Aksi</Th>
+                        <Th align="right" className="w-[110px]">Aksi</Th>
                       </Tr>
                     </TableHead>
                     <TableBody>
@@ -396,7 +396,7 @@ export default async function AdministrationPage() {
                           <Td className="font-mono text-[13px] font-bold text-brand-700">{c.code}</Td>
                           <Td className="font-medium text-slate-900">{c.name}</Td>
                           <Td align="right" className="tnum font-medium text-slate-700">
-                            {c._count.items} barang
+                            {c._count.items} item
                           </Td>
                           <Td>
                             <StatusBadge status={c.status} />
@@ -423,7 +423,7 @@ export default async function AdministrationPage() {
                 actions={
                   <div className="flex items-center gap-2">
                     <ExportCsvButton
-                      filename={`satuan-uom-${todayJakarta()}.csv`}
+                      filename={`uoms-${todayJakarta()}.csv`}
                       headers={["Kode", "Nama", "Dimensi", "Presisi Desimal", "Status"]}
                       rows={uoms.map((u) => [
                         u.code,
@@ -436,7 +436,7 @@ export default async function AdministrationPage() {
                     <CreateUomModal />
                   </div>
                 }
-                description="Satuan unit untuk item, BOM, pembelian, dan persediaan dengan presisi desimal."
+                description="Satuan unit untuk item, BOM, pembelian, dan inventory dengan presisi desimal."
                 title="Daftar Satuan Ukuran (Units of Measure)"
               />
               <CardBody className="p-0">
@@ -452,7 +452,7 @@ export default async function AdministrationPage() {
                         <Th align="right" className="w-[140px]">Presisi Desimal</Th>
                         <Th align="right" className="w-[170px]">Digunakan Pada</Th>
                         <Th className="w-[110px]">Status</Th>
-                        <Th align="right" className="w-[100px]">Aksi</Th>
+                        <Th align="right" className="w-[110px]">Aksi</Th>
                       </Tr>
                     </TableHead>
                     <TableBody>
@@ -467,7 +467,7 @@ export default async function AdministrationPage() {
                             {u.precision} angka desimal
                           </Td>
                           <Td align="right" className="tnum text-slate-700">
-                            <span className="font-medium">{u._count.baseItems}</span> barang /{" "}
+                            <span className="font-medium">{u._count.baseItems}</span> item /{" "}
                             <span className="text-slate-500">{u._count.conversionsFrom} konversi</span>
                           </Td>
                           <Td>
@@ -492,7 +492,7 @@ export default async function AdministrationPage() {
               <CardBody className="p-0">
                 {uomConversions.length === 0 ? (
                   <div className="p-6 text-center text-sm text-slate-500">
-                    Belum ada aturan konversi satuan khusus. Konversi dapat ditambahkan dari modul Master Barang.
+                    Belum ada aturan konversi satuan khusus. Konversi dapat ditambahkan dari modul Item Master.
                   </div>
                 ) : (
                   <Table>
@@ -539,7 +539,7 @@ export default async function AdministrationPage() {
                 actions={
                   <div className="flex items-center gap-2">
                     <ExportCsvButton
-                      filename={`work-center-${todayJakarta()}.csv`}
+                      filename={`work-centers-${todayJakarta()}.csv`}
                       headers={["Kode Stasiun", "Nama Work Center", "Tarif / Jam (IDR)", "Menit Standar", "Total WO Ditugaskan", "Status"]}
                       rows={workCenters.map((wc) => [
                         wc.code,
@@ -553,7 +553,7 @@ export default async function AdministrationPage() {
                     <CreateWorkCenterModal />
                   </div>
                 }
-                description="Stasiun kerja atau mesin produksi untuk penjadwalan perintah kerja (WO) dan perhitungan biaya konversi."
+                description="Stasiun kerja atau mesin produksi untuk penjadwalan Work Order (WO) dan perhitungan biaya konversi."
                 title="Daftar Pusat Kerja Produksi (Work Centers)"
               />
               <CardBody className="p-0">
@@ -569,7 +569,7 @@ export default async function AdministrationPage() {
                         <Th align="right" className="w-[120px]">Menit Standar</Th>
                         <Th align="right" className="w-[160px]">Total WO Ditugaskan</Th>
                         <Th className="w-[110px]">Status</Th>
-                        <Th align="right" className="w-[100px]">Aksi</Th>
+                        <Th align="right" className="w-[110px]">Aksi</Th>
                       </Tr>
                     </TableHead>
                     <TableBody>
@@ -584,7 +584,7 @@ export default async function AdministrationPage() {
                             {wc.standardMinutes.toString()} mnt
                           </Td>
                           <Td align="right" className="tnum font-medium text-slate-700">
-                            {wc._count.workOrders} perintah kerja
+                            {wc._count.workOrders} Work Order
                           </Td>
                           <Td>
                             <StatusBadge status={wc.status} />
@@ -610,7 +610,7 @@ export default async function AdministrationPage() {
                 actions={
                   <div className="flex items-center gap-2">
                     <ExportCsvButton
-                      filename={`gudang-${todayJakarta()}.csv`}
+                      filename={`warehouses-${todayJakarta()}.csv`}
                       headers={["Kode", "Nama Gudang", "Tipe Lokasi", "Deskripsi", "Total Saldo Stok", "Mutasi Tercatat", "Status"]}
                       rows={warehouses.map((w) => [
                         w.code,
@@ -625,7 +625,7 @@ export default async function AdministrationPage() {
                     <CreateWarehouseModal />
                   </div>
                 }
-                description="Lokasi penyimpanan bahan baku, komponen, barang jadi, dan lantai kerja (WIP)."
+                description="Lokasi penyimpanan bahan baku, komponen, Finished Goods, dan lantai kerja (WIP)."
                 title="Daftar Gudang & Lokasi"
               />
               <CardBody className="p-0">
@@ -642,7 +642,7 @@ export default async function AdministrationPage() {
                         <Th align="right" className="w-[130px]">Total Saldo Stok</Th>
                         <Th align="right" className="w-[130px]">Mutasi Tercatat</Th>
                         <Th className="w-[110px]">Status</Th>
-                        <Th align="right" className="w-[100px]">Aksi</Th>
+                        <Th align="right" className="w-[110px]">Aksi</Th>
                       </Tr>
                     </TableHead>
                     <TableBody>
@@ -680,7 +680,7 @@ export default async function AdministrationPage() {
           </div>
         </TabPanel>
 
-        {/* Tab 6: Pemasok */}
+        {/* Tab 6: Suppliers */}
         <TabPanel value="suppliers">
           <div className="mt-5">
             <Card>
@@ -688,8 +688,8 @@ export default async function AdministrationPage() {
                 actions={
                   <div className="flex items-center gap-2">
                     <ExportCsvButton
-                      filename={`pemasok-${todayJakarta()}.csv`}
-                      headers={["Kode", "Nama Pemasok", "Email", "Telepon", "Alamat", "Total PO", "Status"]}
+                      filename={`suppliers-${todayJakarta()}.csv`}
+                      headers={["Kode", "Nama Supplier", "Email", "Telepon", "Alamat", "Total PO", "Status"]}
                       rows={suppliers.map((s) => [
                         s.code,
                         s.name,
@@ -703,23 +703,23 @@ export default async function AdministrationPage() {
                     <CreateSupplierModal />
                   </div>
                 }
-                description="Rekanan pemasok bahan baku dan komponen pembelian."
-                title="Daftar Pemasok (Suppliers)"
+                description="Daftar rekanan supplier bahan baku, sub-assembly, dan komponen pengadaan."
+                title="Daftar Suppliers"
               />
               <CardBody className="p-0">
                 {suppliers.length === 0 ? (
-                  <EmptyState icon={<Building2 aria-hidden className="size-5" />} title="Belum ada pemasok" />
+                  <EmptyState icon={<Building2 aria-hidden className="size-5" />} title="Belum ada data supplier" />
                 ) : (
                   <Table>
                     <TableHead>
                       <Tr>
                         <Th className="w-[120px]">Kode</Th>
-                        <Th className="w-[180px]">Nama Pemasok</Th>
+                        <Th className="w-[180px]">Nama Supplier</Th>
                         <Th className="w-[180px]">Kontak</Th>
                         <Th>Alamat</Th>
-                        <Th align="right" className="w-[160px]">Pesanan Pembelian (PO)</Th>
+                        <Th align="right" className="w-[160px]">Total PO & PR</Th>
                         <Th className="w-[110px]">Status</Th>
-                        <Th align="right" className="w-[100px]">Aksi</Th>
+                        <Th align="right" className="w-[110px]">Aksi</Th>
                       </Tr>
                     </TableHead>
                     <TableBody>
@@ -771,7 +771,7 @@ export default async function AdministrationPage() {
                     ])}
                   />
                 }
-                description="Catatan immutable semua mutasi sistem: perubahan status, posting persediaan, transaksi produksi, dan administrasi."
+                description="Catatan immutable semua mutasi sistem: perubahan status, posting inventory, transaksi produksi, dan administrasi."
                 title="Riwayat Jejak Audit (Audit Trail)"
               />
               <CardBody className="p-0">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Copy, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
@@ -51,6 +51,24 @@ export function CloneBomModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!open) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") handleClose();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const original = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = original;
+    };
+  }, [open]);
+
   function handleOpen() {
     const rev = suggestNextRevision(sourceBom.revision);
     setRevision(rev);
@@ -98,19 +116,19 @@ export function CloneBomModal({
   return (
     <>
       <Button size="sm" variant="secondary" onClick={handleOpen}>
-        <Copy aria-hidden className="size-4 mr-1.5" />
+        <Copy aria-hidden className="size-4" />
         Buat Revisi Baru
       </Button>
 
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
           <div
             aria-hidden="true"
             className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
             onClick={handleClose}
           />
-          <div className="relative z-10 w-full max-w-lg">
-            <Card className="shadow-2xl">
+          <div className="relative z-10 w-full max-w-lg my-auto">
+            <Card className="shadow-2xl max-h-[90vh] flex flex-col">
               <CardHeader
                 actions={
                   <button
@@ -125,12 +143,12 @@ export function CloneBomModal({
                 description="Salin struktur komponen dan rasio scrap dari BOM ini ke versi revisi baru (status draf)."
                 title="Buat Revisi Baru dari BOM"
               />
-              <CardBody className="space-y-4">
+              <CardBody className="space-y-4 overflow-y-auto">
                 {error ? <Alert tone="danger" onClose={() => setError(null)}>{error}</Alert> : null}
 
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 space-y-1">
                   <div>
-                    <span className="font-semibold text-slate-800">Barang Output:</span>{" "}
+                    <span className="font-semibold text-slate-800">Item Output:</span>{" "}
                     {sourceBom.outputItem.sku} — {sourceBom.outputItem.name}
                   </div>
                   <div>
@@ -183,7 +201,7 @@ export function CloneBomModal({
                       type="submit"
                       variant="primary"
                     >
-                      <Copy aria-hidden className="size-4 mr-2" />
+                      <Copy aria-hidden className="size-4" />
                       Buat Revisi (Draf)
                     </Button>
                   </div>

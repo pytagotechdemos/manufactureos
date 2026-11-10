@@ -31,7 +31,7 @@ test.describe("Complete manufacturing lifecycle", () => {
 
     // 4. Navigate to Planning & MRP
     await page.goto("/planning");
-    await expect(page.locator("h1:has-text('Perencanaan & MRP'), h1:has-text('Permintaan & MRP'), h1:has-text('Perencanaan')")).toBeVisible();
+    await expect(page.locator("h1:has-text('Planning & MRP'), h1:has-text('Perencanaan & MRP'), h1:has-text('Permintaan & MRP'), h1:has-text('Perencanaan')")).toBeVisible();
 
     // 5. Navigate to Procurement and verify PO/GR flows
     await page.goto("/procurement");

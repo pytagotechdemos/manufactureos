@@ -4,7 +4,7 @@ import { PlanningScreen } from "@/components/planning/planning-screen";
 import { requireCurrentUser } from "@/lib/auth-session";
 import { userHasPermission } from "@/lib/authorize";
 
-export const metadata: Metadata = { title: "Perencanaan" };
+export const metadata: Metadata = { title: "Planning & MRP" };
 
 export default async function PlanningPage() {
   const user = await requireCurrentUser();

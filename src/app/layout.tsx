@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     default: "ManufactureOS",
     template: "%s · ManufactureOS",
   },
-  description: "ERP manufaktur untuk produksi diskret: permintaan, BOM, MRP, pengadaan, inventori, produksi, kualitas, dan penetapan biaya.",
+  description: "Discrete Manufacturing ERP: BOM, Item Master, Production Planning & MRP, Procurement, Inventory & Stock, Manufacturing Orders, Quality Control, dan Cost Accounting.",
 };
 
 export default function RootLayout({

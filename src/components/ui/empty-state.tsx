@@ -35,7 +35,7 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
           <path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </div>
-      <p className="text-sm font-medium text-slate-900">Something went wrong</p>
+      <p className="text-sm font-medium text-slate-900">Terjadi kendala</p>
       <p className="mt-1 max-w-sm text-[13px] text-slate-500">{message}</p>
       {onRetry ? (
         <button
@@ -43,7 +43,7 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
           onClick={onRetry}
           type="button"
         >
-          Try again
+          Coba lagi
         </button>
       ) : null}
     </div>

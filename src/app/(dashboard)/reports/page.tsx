@@ -249,7 +249,7 @@ export default function ReportsPage() {
 
   function exportVariance() {
     downloadCsv(
-      `variansi-produksi-${todayJakarta()}.csv`,
+      `cost-variance-${todayJakarta()}.csv`,
       [
         "Nomor MO",
         "SKU",
@@ -295,7 +295,7 @@ export default function ReportsPage() {
 
   function exportInventory() {
     downloadCsv(
-      `valuasi-inventori-${todayJakarta()}.csv`,
+      `inventory-valuation-${todayJakarta()}.csv`,
       ["SKU", "Barang", "Gudang", "On hand", "Biaya rata-rata", "Nilai"],
       valuationRows.map((row) => [
         row.sku,
@@ -311,7 +311,7 @@ export default function ReportsPage() {
   function exportWip() {
     const wipRows = costs.filter((row) => row.wipCost > 0);
     downloadCsv(
-      `nilai-wip-${todayJakarta()}.csv`,
+      `wip-valuation-${todayJakarta()}.csv`,
       ["Nomor MO", "SKU", "Status", "Nilai WIP"],
       wipRows.map((row) => [
         row.moNumber,
@@ -449,7 +449,7 @@ export default function ReportsPage() {
         <Card>
           <CardHeader
             title="Biaya Produksi & Variansi per Manufacturing Order (MO)"
-            description={`${filteredCosts.length} dari ${costs.length} pesanan · ${costsWithVariance.length} memiliki pembanding estimasi dan aktual.`}
+            description={`${filteredCosts.length} dari ${costs.length} Manufacturing Order · ${costsWithVariance.length} memiliki pembanding estimasi dan aktual.`}
             actions={
               <div className="flex items-center gap-2">
                 <SearchInput
@@ -467,9 +467,9 @@ export default function ReportsPage() {
             {loading ? (
               <div className="p-8 text-center text-slate-500">Memuat data biaya…</div>
             ) : costs.length === 0 ? (
-              <EmptyState title="Belum ada pesanan produksi" description="Biaya muncul setelah MO dibuat dan snapshot biaya dihitung." />
+              <EmptyState title="Belum ada Manufacturing Order (MO)" description="Biaya produksi muncul setelah MO dibuat dan snapshot biaya dihitung." />
             ) : filteredCosts.length === 0 ? (
-              <EmptyState title="Tidak ada hasil" description="Tidak ada pesanan yang cocok dengan pencarian." />
+              <EmptyState title="Tidak ada hasil" description="Tidak ada Manufacturing Order yang cocok dengan pencarian." />
             ) : (
               <>
                 <Table>
@@ -483,7 +483,7 @@ export default function ReportsPage() {
                       <Th align="right" className="w-[120px]">Aktual</Th>
                       <Th align="right" className="w-[120px]">Variansi</Th>
                       <Th align="right" className="w-[90px]">Variansi %</Th>
-                      <Th align="right" className="w-[120px]">Aksi</Th>
+                      <Th align="right" className="w-[140px]">Aksi</Th>
                     </Tr>
                   </TableHead>
                   <TableBody>
@@ -569,7 +569,7 @@ export default function ReportsPage() {
                                   </span>
                                 )
                               ) : (
-                                <span className="text-[12px] text-slate-400" title="Biaya aktual hanya dapat dihitung setelah pesanan selesai">
+                                <span className="text-[12px] text-slate-400" title="Biaya aktual hanya dapat dihitung setelah MO selesai (COMPLETED)">
                                   Menunggu selesai
                                 </span>
                               )}
@@ -656,14 +656,14 @@ export default function ReportsPage() {
 
                                 <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-2.5 text-xs">
                                   <span className="text-slate-500">
-                                    Tindak lanjut operasional pesanan manufaktur:
+                                    Tindak lanjut operasional Manufacturing Order:
                                   </span>
                                   <div className="flex items-center gap-3">
                                     <Link
                                       href={`/manufacturing/materials?mo=${row.moId}`}
                                       className="inline-flex items-center gap-1 font-medium text-brand-600 hover:text-brand-800 hover:underline"
                                     >
-                                      Periksa Bahan & Konsumsi
+                                      Material MO & WIP
                                       <ExternalLink aria-hidden className="size-3" />
                                     </Link>
                                     <span className="text-slate-300">&middot;</span>
@@ -709,7 +709,7 @@ export default function ReportsPage() {
         <Card>
           <CardHeader
             title="Valuasi Stok Persediaan (Inventory Valuation)"
-            description={`${filteredValuation.length} dari ${valuationRows.length} saldo · nilai persediaan berdasarkan on hand dan biaya rata-rata bergerak.`}
+            description={`${filteredValuation.length} dari ${valuationRows.length} saldo · nilai persediaan berdasarkan on hand dan moving average cost.`}
             actions={
               <div className="flex items-center gap-2">
                 <SearchInput
@@ -742,8 +742,8 @@ export default function ReportsPage() {
                     <TableHead>
                       <Tr>
                         <Th className="w-[140px]">SKU</Th>
-                        <Th>Nama Barang</Th>
-                        <Th className="w-[110px]">Gudang</Th>
+                        <Th>Nama Item</Th>
+                        <Th className="w-[110px]">Warehouse</Th>
                         <Th align="right" className="w-[110px]">On Hand</Th>
                         <Th align="right" className="w-[130px]">Biaya Rata-rata</Th>
                         <Th align="right" className="w-[140px]">Nilai Buku</Th>
@@ -785,7 +785,7 @@ export default function ReportsPage() {
         <Card>
           <CardHeader
             title="Valuasi Work In Progress (WIP)"
-            description={`${filteredWip.length} dari ${wipRows.length} pesanan · nilai WIP dari pesanan yang selesai dengan output parsial.`}
+            description={`${filteredWip.length} dari ${wipRows.length} MO · nilai WIP dari pesanan yang selesai dengan output parsial.`}
             actions={
               <div className="flex items-center gap-2">
                 <SearchInput
@@ -810,17 +810,17 @@ export default function ReportsPage() {
             ) : wipRows.length === 0 ? (
               <EmptyState
                 title="Belum ada nilai WIP"
-                description="Nilai WIP dihitung saat pesanan selesai dengan output di bawah target kuantitas."
+                description="Nilai WIP dihitung saat MO selesai dengan output di bawah target kuantitas."
               />
             ) : filteredWip.length === 0 ? (
-              <EmptyState title="Tidak ada hasil" description="Tidak ada pesanan WIP yang cocok dengan pencarian." />
+              <EmptyState title="Tidak ada hasil" description="Tidak ada MO WIP yang cocok dengan pencarian." />
             ) : (
               <>
                 <Table>
                   <TableHead>
                     <Tr>
                       <Th className="w-[160px]">Nomor MO</Th>
-                      <Th>SKU Barang</Th>
+                      <Th>SKU Item</Th>
                       <Th className="w-[120px]">Status</Th>
                       <Th align="right" className="w-[150px]">Nilai Saldo WIP</Th>
                     </Tr>

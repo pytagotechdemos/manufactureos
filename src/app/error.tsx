@@ -17,7 +17,7 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 text-center">
+    <main id="main-content" className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 text-center">
       <div className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-red-50 ring-8 ring-red-50/60">
         <AlertTriangle aria-hidden className="size-8 text-red-600" />
       </div>
@@ -34,19 +34,20 @@ export default function GlobalError({
       ) : null}
       <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
         <Button onClick={reset} variant="primary">
-          <RotateCcw aria-hidden className="size-4 mr-2" />
+          <RotateCcw aria-hidden className="size-4" />
           Coba Muat Ulang
         </Button>
-        <Link href="/overview">
-          <Button variant="secondary">
-            <ArrowLeft aria-hidden className="size-4 mr-2" />
-            Kembali ke Beranda
-          </Button>
+        <Link
+          href="/overview"
+          className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3.5 text-sm font-medium text-slate-700 shadow-xs transition-colors hover:bg-slate-50 hover:text-slate-900"
+        >
+          <ArrowLeft aria-hidden className="size-4" />
+          Kembali ke Overview
         </Link>
       </div>
       <div className="mt-12 text-xs text-slate-400">
         ManufactureOS &middot; Discrete Manufacturing ERP
       </div>
-    </div>
+    </main>
   );
 }

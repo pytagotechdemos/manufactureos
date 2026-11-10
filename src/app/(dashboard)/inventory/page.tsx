@@ -56,14 +56,14 @@ type Item = { id: string; sku: string; name: string; baseUom: { code: string } |
 type Tab = "balances" | "receipt" | "issue" | "transfer" | "adjust" | "block" | "reservations" | "movements";
 
 const tabs: Array<{ id: Tab; label: string }> = [
-  { id: "balances", label: "Saldo stok" },
-  { id: "receipt", label: "Terima" },
-  { id: "issue", label: "Keluar" },
-  { id: "transfer", label: "Transfer" },
+  { id: "balances", label: "Saldo Stok" },
+  { id: "receipt", label: "Penerimaan" },
+  { id: "issue", label: "Pengeluaran" },
+  { id: "transfer", label: "Transfer Gudang" },
   { id: "adjust", label: "Penyesuaian" },
-  { id: "block", label: "Blokir / Buka" },
-  { id: "reservations", label: "Reservasi" },
-  { id: "movements", label: "Riwayat mutasi" },
+  { id: "block", label: "Blokir / Karantina" },
+  { id: "reservations", label: "Reservasi Material" },
+  { id: "movements", label: "Ledger Mutasi" },
 ];
 
 export default function InventoryPage() {
@@ -114,7 +114,7 @@ export default function InventoryPage() {
         fetch("/api/v1/inventory/movements?limit=100"),
         fetch("/api/v1/inventory/reservations"),
       ]);
-      if (!balanceRes.ok || !masterRes.ok || !movementRes.ok || !reservationRes.ok) throw new Error("Gagal memuat data inventori");
+      if (!balanceRes.ok || !masterRes.ok || !movementRes.ok || !reservationRes.ok) throw new Error("Gagal memuat data inventory");
       const [balanceJson, masterJson, movementJson, reservationJson] = await Promise.all([
         balanceRes.json(),
         masterRes.json(),
@@ -128,7 +128,7 @@ export default function InventoryPage() {
       setItems(master.items ?? []);
       setWarehouses(master.warehouses ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memuat data inventori");
+      setError(err instanceof Error ? err.message : "Gagal memuat data inventory");
     } finally {
       setLoading(false);
     }
@@ -231,17 +231,17 @@ export default function InventoryPage() {
 
   function exportBalancesCsv() {
     downloadCsv(
-      `saldo-stok-${todayJakarta()}.csv`,
+      `inventory-balances-${todayJakarta()}.csv`,
       [
-        "SKU",
-        "Nama Barang",
-        "Kode Gudang",
-        "Nama Gudang",
+        "SKU Item",
+        "Nama Item",
+        "Kode Warehouse",
+        "Nama Warehouse",
         "On Hand",
-        "Dipesan",
-        "Diblokir",
-        "Tersedia",
-        "Biaya Satuan Rata-rata",
+        "Reserved",
+        "Blocked",
+        "Available",
+        "Moving Avg Cost",
         "Total Nilai",
       ],
       filteredBalances.map((row) => {
@@ -265,17 +265,17 @@ export default function InventoryPage() {
 
   function exportReservationsCsv() {
     downloadCsv(
-      `reservasi-stok-${todayJakarta()}.csv`,
+      `inventory-reservations-${todayJakarta()}.csv`,
       [
-        "SKU",
-        "Nama Barang",
-        "Kode Gudang",
-        "Nama Gudang",
-        "Jenis Sumber",
-        "ID Sumber",
-        "Dipesan",
-        "Terpakai",
-        "Sisa Reservasi",
+        "SKU Item",
+        "Nama Item",
+        "Kode Warehouse",
+        "Nama Warehouse",
+        "Source Type",
+        "Source Ref",
+        "Reserved Qty",
+        "Consumed Qty",
+        "Remaining Qty",
         "Status",
         "Waktu Dibuat",
       ],
@@ -300,18 +300,18 @@ export default function InventoryPage() {
 
   function exportMovementsCsv() {
     downloadCsv(
-      `riwayat-mutasi-${todayJakarta()}.csv`,
+      `inventory-movements-${todayJakarta()}.csv`,
       [
         "Waktu Mutasi",
-        "SKU",
-        "Nama Barang",
-        "Kode Gudang",
-        "Nama Gudang",
-        "Jenis Mutasi",
-        "Kuantitas",
-        "Biaya Satuan",
-        "Jenis Sumber",
-        "ID Sumber",
+        "SKU Item",
+        "Nama Item",
+        "Kode Warehouse",
+        "Nama Warehouse",
+        "Movement Type",
+        "Quantity",
+        "Unit Cost",
+        "Source Type",
+        "Source Ref",
       ],
       filteredMovements.map((m) => [
         formatDateTime(m.postedAt),
@@ -488,19 +488,19 @@ export default function InventoryPage() {
       {notice ? <Alert tone="success" onClose={() => setNotice(null)}>{notice}</Alert> : null}
 
       <StatGrid>
-        <Stat label="Baris stok" value={balances.length} />
-        <Stat label="Saldo tersedia" hint={`${availableBalanceRows} baris dengan stok tersedia`} value={availableBalanceRows} />
-        <Stat label="Dipesan" hint="unit" value={formatQuantity(totals.reserved)} />
-        <Stat label="Diblokir" hint="unit" tone="warning" value={formatQuantity(totals.blocked)} />
+        <Stat label="Baris Saldo Stok" value={balances.length} />
+        <Stat label="Saldo Tersedia" hint={`${availableBalanceRows} item memiliki stok tersedia`} value={availableBalanceRows} />
+        <Stat label="Total Reserved" hint="Dipesan untuk MO / produksi" value={formatQuantity(totals.reserved)} />
+        <Stat label="Total Blocked" hint="Karantina / diblokir" tone="warning" value={formatQuantity(totals.blocked)} />
       </StatGrid>
 
-      <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-2">
+      <div className="flex gap-2 border-b border-slate-200 pb-2 overflow-x-auto scroll-area">
         {tabs.map((entry) => (
           <button
             key={entry.id}
             type="button"
             onClick={() => setTab(entry.id)}
-            className={`rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors ${
+            className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors ${
               tab === entry.id
                 ? "bg-brand-600 text-white shadow-xs"
                 : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
@@ -542,15 +542,15 @@ export default function InventoryPage() {
                 <Table>
                   <TableHead>
                     <Tr>
-                      <Th>SKU</Th>
-                      <Th>Barang</Th>
-                      <Th>Gudang</Th>
-                      <Th align="right">On hand</Th>
-                      <Th align="right">Dipesan</Th>
-                      <Th align="right">Diblokir</Th>
-                      <Th align="right">Tersedia</Th>
-                      <Th align="right">Biaya rata-rata</Th>
-                      <Th align="right">Aksi</Th>
+                      <Th className="w-[140px]">SKU</Th>
+                      <Th>Item / Barang</Th>
+                      <Th className="w-[110px]">Gudang</Th>
+                      <Th align="right" className="w-[90px]">On Hand</Th>
+                      <Th align="right" className="w-[90px]">Reserved</Th>
+                      <Th align="right" className="w-[90px]">Blocked</Th>
+                      <Th align="right" className="w-[90px]">Available</Th>
+                      <Th align="right" className="w-[120px]">Biaya Rata-rata</Th>
+                      <Th align="right" className="w-[260px]">Aksi</Th>
                     </Tr>
                   </TableHead>
                   <TableBody>
@@ -558,19 +558,19 @@ export default function InventoryPage() {
                     const available = new Decimal(row.onHand).minus(row.reserved).minus(row.blocked);
                     return (
                       <Tr key={row.id}>
-                        <Td className="tnum font-medium">{row.item.sku}</Td>
+                        <Td className="tnum font-medium whitespace-nowrap">{row.item.sku}</Td>
                         <Td className="text-slate-600">{row.item.name}</Td>
-                        <Td className="tnum text-slate-600">{row.warehouse.code}</Td>
-                        <Td align="right" className="tnum text-slate-600">{formatQuantity(row.onHand)}</Td>
-                        <Td align="right" className="tnum text-slate-600">{formatQuantity(row.reserved)}</Td>
-                        <Td align="right" className="tnum text-slate-600">{formatQuantity(row.blocked)}</Td>
-                        <Td align="right" className={`tnum font-medium ${available.lessThanOrEqualTo(0) ? "text-red-600" : "text-slate-700"}`}>
+                        <Td className="tnum text-slate-600 whitespace-nowrap">{row.warehouse.code}</Td>
+                        <Td align="right" className="tnum text-slate-600 whitespace-nowrap">{formatQuantity(row.onHand)}</Td>
+                        <Td align="right" className="tnum text-slate-600 whitespace-nowrap">{formatQuantity(row.reserved)}</Td>
+                        <Td align="right" className="tnum text-slate-600 whitespace-nowrap">{formatQuantity(row.blocked)}</Td>
+                        <Td align="right" className={`tnum font-medium whitespace-nowrap ${available.lessThanOrEqualTo(0) ? "text-red-600" : "text-slate-700"}`}>
                           {formatQuantity(available.toString())}
                         </Td>
-                        <Td align="right" className="tnum text-slate-600">
+                        <Td align="right" className="tnum text-slate-600 whitespace-nowrap">
                           {row.averageUnitCost ? formatMoney(row.averageUnitCost) : "—"}
                         </Td>
-                        <Td align="right">
+                        <Td align="right" className="whitespace-nowrap">
                           <div className="flex items-center justify-end gap-1.5">
                             <button
                               type="button"
@@ -984,7 +984,7 @@ export default function InventoryPage() {
                 description={
                   search
                     ? "Coba ubah kata kunci pencarian atau filter status."
-                    : "Reservasi stok dibuat otomatis saat pesanan manufaktur dirilis atau melalui pencadangan stok."
+                    : "Reservasi stok dibuat otomatis saat Manufacturing Order (MO) dirilis atau melalui alokasi kebutuhan bahan."
                 }
               />
             ) : (
@@ -992,16 +992,16 @@ export default function InventoryPage() {
                 <Table>
                   <TableHead>
                     <Tr>
-                      <Th>SKU</Th>
+                      <Th className="w-[140px]">SKU</Th>
                       <Th>Barang</Th>
-                      <Th>Gudang</Th>
-                      <Th>Sumber</Th>
-                      <Th align="right">Dipesan</Th>
-                      <Th align="right">Terpakai</Th>
-                      <Th align="right">Sisa reservasi</Th>
-                      <Th>Status</Th>
-                      <Th align="right">Waktu dibuat</Th>
-                      <Th align="right">Aksi</Th>
+                      <Th className="w-[100px]">Gudang</Th>
+                      <Th className="w-[160px]">Sumber Reservasi</Th>
+                      <Th align="right" className="w-[90px]">Dipesan</Th>
+                      <Th align="right" className="w-[90px]">Terpakai</Th>
+                      <Th align="right" className="w-[90px]">Sisa</Th>
+                      <Th className="w-[100px]">Status</Th>
+                      <Th align="right" className="w-[140px]">Waktu Dibuat</Th>
+                      <Th align="right" className="w-[80px]">Aksi</Th>
                     </Tr>
                   </TableHead>
                   <TableBody>
@@ -1098,27 +1098,27 @@ export default function InventoryPage() {
                 <Table>
                   <TableHead>
                     <Tr>
-                      <Th>Waktu</Th>
-                      <Th>Barang</Th>
-                      <Th>Gudang</Th>
-                      <Th>Jenis</Th>
-                      <Th align="right">Kuantitas</Th>
-                      <Th align="right">Biaya satuan</Th>
-                      <Th>Sumber</Th>
+                      <Th className="w-[150px]">Waktu Mutasi</Th>
+                      <Th className="w-[140px]">SKU Barang</Th>
+                      <Th className="w-[100px]">Gudang</Th>
+                      <Th className="w-[110px]">Jenis Mutasi</Th>
+                      <Th align="right" className="w-[100px]">Kuantitas</Th>
+                      <Th align="right" className="w-[120px]">Biaya Satuan</Th>
+                      <Th>Dokumen / Sumber</Th>
                     </Tr>
                   </TableHead>
                   <TableBody>
                     {paginatedMovements.map((movement) => (
                       <Tr key={movement.id}>
-                        <Td className="tnum text-slate-500">{formatDateTime(movement.postedAt)}</Td>
-                        <Td className="tnum text-slate-700">{movement.item.sku}</Td>
-                        <Td className="tnum text-slate-600">{movement.warehouse.code}</Td>
-                        <Td>
+                        <Td className="tnum text-slate-500 whitespace-nowrap">{formatDateTime(movement.postedAt)}</Td>
+                        <Td className="tnum font-medium text-slate-700 whitespace-nowrap">{movement.item.sku}</Td>
+                        <Td className="tnum text-slate-600 whitespace-nowrap">{movement.warehouse.code}</Td>
+                        <Td className="whitespace-nowrap">
                           <StatusBadge status={movement.movementType} />
                         </Td>
-                        <Td align="right" className="tnum text-slate-600">{formatQuantity(movement.quantity)}</Td>
-                        <Td align="right" className="tnum text-slate-600">{movement.unitCost ? formatMoney(movement.unitCost) : "—"}</Td>
-                        <Td className="text-slate-500">{humanize(movement.sourceType)} · {movement.sourceId}</Td>
+                        <Td align="right" className="tnum text-slate-600 whitespace-nowrap">{formatQuantity(movement.quantity)}</Td>
+                        <Td align="right" className="tnum text-slate-600 whitespace-nowrap">{movement.unitCost ? formatMoney(movement.unitCost) : "—"}</Td>
+                        <Td className="text-slate-500 text-xs truncate max-w-[200px]">{humanize(movement.sourceType)} · {movement.sourceId}</Td>
                       </Tr>
                     ))}
                   </TableBody>

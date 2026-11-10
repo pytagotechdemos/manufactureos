@@ -97,7 +97,7 @@ type DemandLineDraft = {
 
 async function readJson<T>(response: Response): Promise<T> {
   const result = (await response.json()) as T & { error?: { message?: string } };
-  if (!response.ok) throw new Error(result.error?.message ?? "Permintaan gagal");
+  if (!response.ok) throw new Error(result.error?.message ?? "Gagal memproses data");
   return result;
 }
 
@@ -209,8 +209,8 @@ export function PlanningScreen({ permissions }: { permissions: Permissions }) {
 
   function exportDemandsCsv() {
     downloadCsv(
-      `permintaan-produksi-${todayJakarta()}.csv`,
-      ["Nomor", "Barang (SKU)", "Status", "Tanggal"],
+      `production-demands-${todayJakarta()}.csv`,
+      ["Nomor Demand", "Baris Item (SKU & Qty)", "Status", "Tanggal"],
       demands.map((d) => [
         d.number,
         d.lines.map((l) => `${l.item.sku}: ${l.quantity}`).join("; "),
@@ -235,12 +235,12 @@ export function PlanningScreen({ permissions }: { permissions: Permissions }) {
   function exportRecommendationsCsv() {
     if (!selectedRun) return;
     downloadCsv(
-      `mrp-rekomendasi-${selectedRun.runNumber}-${todayJakarta()}.csv`,
-      ["SKU", "Nama Barang", "Tipe Pengadaan", "Kuantitas", "Satuan", "Tanggal Dibutuhkan", "Rencana Rilis", "Status"],
+      `mrp-recommendations-${selectedRun.runNumber}-${todayJakarta()}.csv`,
+      ["SKU Item", "Nama Item", "Supply Type", "Quantity", "UOM", "Tanggal Dibutuhkan (Needed By)", "Rencana Rilis", "Status"],
       selectedRun.recommendations.map((r) => [
         r.item.sku,
         r.item.name,
-        r.supplyType === "BUY" ? "Beli (PO)" : "Buat (MO)",
+        r.supplyType === "BUY" ? "BUY (PO)" : "MAKE (MO)",
         r.quantity,
         r.item.baseUom.code,
         r.requiredDate,
@@ -254,7 +254,7 @@ export function PlanningScreen({ permissions }: { permissions: Permissions }) {
     if (!selectedRun) return;
     downloadCsv(
       `mrp-buckets-${selectedRun.runNumber}-${todayJakarta()}.csv`,
-      ["Tanggal", "SKU", "Nama Barang", "Kebutuhan Kotor", "Jadwal Penerimaan", "Tersisa", "Kebutuhan Net"],
+      ["Tanggal Bucket", "SKU Item", "Nama Item", "Gross Requirements", "Scheduled Receipts", "Projected Available", "Net Requirements"],
       selectedRun.buckets.map((b) => [
         b.bucketDate,
         b.item.sku,
@@ -307,7 +307,7 @@ export function PlanningScreen({ permissions }: { permissions: Permissions }) {
 
     for (const line of demandLines) {
       if (!line.itemId) {
-        setError("Pilih barang untuk setiap baris permintaan.");
+        setError("Pilih item untuk setiap baris demand.");
         setSubmitting(false);
         return;
       }
@@ -324,7 +324,7 @@ export function PlanningScreen({ permissions }: { permissions: Permissions }) {
         return;
       }
       if (!line.requiredDate) {
-        setError("Tanggal dibutuhkan wajib diisi untuk setiap baris.");
+        setError("Tanggal dibutuhkan (Needed By) wajib diisi untuk setiap baris.");
         setSubmitting(false);
         return;
       }
@@ -346,12 +346,12 @@ export function PlanningScreen({ permissions }: { permissions: Permissions }) {
           body: JSON.stringify(payload),
         }),
       );
-      setNotice(`Permintaan produksi ${payload.number} dibuat sebagai draf.`);
+      setNotice(`Production Demand ${payload.number} dibuat sebagai draf.`);
       setDemandNumber("");
       setDemandLines([{ id: "1", itemId: items[0]?.id ?? "", quantity: "", requiredDate: todayJakarta() }]);
       await refresh();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Gagal membuat permintaan");
+      setError(cause instanceof Error ? cause.message : "Gagal membuat Production Demand");
     } finally {
       setSubmitting(false);
     }
@@ -363,26 +363,26 @@ export function PlanningScreen({ permissions }: { permissions: Permissions }) {
     setNotice(null);
     try {
       await readJson(await fetch(`/api/v1/planning/demands/${id}/release`, { method: "POST" }));
-      setNotice("Permintaan produksi dirilis untuk perencanaan MRP.");
+      setNotice("Production Demand dirilis untuk perencanaan MRP.");
       await refresh();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Gagal merilis permintaan");
+      setError(cause instanceof Error ? cause.message : "Gagal merilis Production Demand");
     } finally {
       setReleasingId(null);
     }
   }
 
   async function cancelDemand(id: string, number: string) {
-    if (!window.confirm(`Batalkan permintaan produksi ${number}?`)) return;
+    if (!window.confirm(`Batalkan Production Demand ${number}?`)) return;
     setReleasingId(id);
     setError(null);
     setNotice(null);
     try {
       await readJson(await fetch(`/api/v1/planning/demands/${id}/cancel`, { method: "POST" }));
-      setNotice(`Permintaan produksi ${number} berhasil dibatalkan.`);
+      setNotice(`Production Demand ${number} berhasil dibatalkan.`);
       await refresh();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Gagal membatalkan permintaan");
+      setError(cause instanceof Error ? cause.message : "Gagal membatalkan Production Demand");
     } finally {
       setReleasingId(null);
     }
@@ -437,7 +437,7 @@ export function PlanningScreen({ permissions }: { permissions: Permissions }) {
     <div className="space-y-5">
       <PageHeader
         eyebrow="Supply Chain & Planning"
-        title="Perencanaan & MRP"
+        title="Planning & MRP"
         description="Kelola production demand, kalkulasi kebutuhan material MRP, dan terbitkan rekomendasi PO/MO."
         actions={
           <Button variant="secondary" onClick={() => { void refresh(); }} loading={loading}>
@@ -453,12 +453,12 @@ export function PlanningScreen({ permissions }: { permissions: Permissions }) {
         {permissions.canCreateDemand ? (
           <Card>
             <CardHeader
-              title="Buat permintaan produksi"
-              description="Permintaan dibuat sebagai draf dan harus dirilis agar dihitung dalam run MRP."
+              title="Buat Production Demand"
+              description="Demand dibuat sebagai draf dan harus dirilis agar dihitung dalam run MRP."
             />
             <CardBody>
               <form className="space-y-4" onSubmit={createDemand}>
-                <Field label="Nomor permintaan" hint="Kosongkan untuk nomor otomatis.">
+                <Field label="Nomor Demand" hint="Kosongkan untuk nomor otomatis.">
                   <Input
                     placeholder={suggestDemandNumber()}
                     value={demandNumber}
@@ -469,7 +469,7 @@ export function PlanningScreen({ permissions }: { permissions: Permissions }) {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      Baris Barang & Kebutuhan ({demandLines.length})
+                      Baris Item & Kebutuhan ({demandLines.length})
                     </span>
                     <Button
                       type="button"
@@ -478,7 +478,7 @@ export function PlanningScreen({ permissions }: { permissions: Permissions }) {
                       onClick={addDemandLine}
                       disabled={submitting || items.length === 0}
                     >
-                      <Plus className="mr-1 size-3.5" />
+                      <Plus aria-hidden className="size-3.5" />
                       Tambah baris
                     </Button>
                   </div>
@@ -488,13 +488,13 @@ export function PlanningScreen({ permissions }: { permissions: Permissions }) {
                       key={line.id}
                       className="grid items-end gap-3 rounded-lg border border-slate-200 bg-slate-50/60 p-3 sm:grid-cols-[1.5fr_1fr_1fr_auto]"
                     >
-                      <Field label={`Barang #${idx + 1}`} required>
+                      <Field label={`Item #${idx + 1}`} required>
                         <Select
                           required
                           value={line.itemId}
                           onChange={(e) => updateDemandLine(line.id, "itemId", e.target.value)}
                         >
-                          <option value="">Pilih barang</option>
+                          <option value="">Pilih item</option>
                           {items.map((item) => (
                             <option key={item.id} value={item.id}>
                               {item.sku} · {item.name}
@@ -513,7 +513,7 @@ export function PlanningScreen({ permissions }: { permissions: Permissions }) {
                           onChange={(e) => updateDemandLine(line.id, "quantity", e.target.value)}
                         />
                       </Field>
-                      <Field label="Tanggal dibutuhkan" required>
+                      <Field label="Tanggal dibutuhkan (Needed By)" required>
                         <Input
                           type="date"
                           min={todayJakarta()}
@@ -544,7 +544,7 @@ export function PlanningScreen({ permissions }: { permissions: Permissions }) {
                   loading={submitting}
                   disabled={loading || items.length === 0}
                 >
-                  {submitting ? "Menyimpan…" : "Buat draf permintaan"}
+                  {submitting ? "Menyimpan…" : "Buat draf demand"}
                 </Button>
               </form>
             </CardBody>
@@ -595,7 +595,7 @@ export function PlanningScreen({ permissions }: { permissions: Permissions }) {
                   {submitting ? "Menghitung…" : "Jalankan MRP"}
                 </Button>
                 <p className="text-[12px] text-slate-500">
-                  Rekomendasi disimpan sebagai referensi. Buat pesanan produksi (MO) atau pesanan pembelian (PO) langsung dari hasil rekomendasi di bawah.
+                  Rekomendasi disimpan sebagai referensi. Buat Manufacturing Order (MO) atau Purchase Order (PO) langsung dari hasil rekomendasi di bawah.
                 </p>
               </form>
             </CardBody>
@@ -606,14 +606,14 @@ export function PlanningScreen({ permissions }: { permissions: Permissions }) {
       {permissions.canReadDemands ? (
         <Card>
           <CardHeader
-            title="Daftar Permintaan Produksi"
-            description={`${filteredDemands.length} dari ${demands.length} permintaan.`}
+            title="Daftar Production Demand"
+            description={`${filteredDemands.length} dari ${demands.length} demand terdaftar.`}
             actions={
               <div className="flex items-center gap-2">
                 <SearchInput
                   value={demandSearch}
                   onChange={(v) => { setDemandSearch(v); setDemandPage(1); }}
-                  placeholder="Cari nomor atau SKU barang…"
+                  placeholder="Cari nomor atau SKU item…"
                 />
                 <Button variant="secondary" size="sm" onClick={exportDemandsCsv} disabled={demands.length === 0}>
                   Ekspor CSV
@@ -623,11 +623,11 @@ export function PlanningScreen({ permissions }: { permissions: Permissions }) {
           />
           <CardBody className="p-0">
             {loading ? (
-              <div className="p-8 text-center text-slate-500">Memuat permintaan produksi…</div>
+              <div className="p-8 text-center text-slate-500">Memuat Production Demand…</div>
             ) : filteredDemands.length === 0 ? (
               <EmptyState
-                title="Belum ada permintaan produksi"
-                description="Buat permintaan produksi baru untuk memulai siklus perencanaan."
+                title="Belum ada Production Demand"
+                description="Buat Production Demand baru untuk memulai siklus perencanaan MRP."
               />
             ) : (
               <>
@@ -635,10 +635,10 @@ export function PlanningScreen({ permissions }: { permissions: Permissions }) {
                   <TableHead>
                     <Tr>
                       <Th className="w-[140px]">Nomor</Th>
-                      <Th>Baris Barang</Th>
+                      <Th>Baris Item</Th>
                       <Th className="w-[170px]">Kebutuhan Paling Awal</Th>
                       <Th className="w-[110px]">Status</Th>
-                      <Th align="right" className="w-[120px]">Aksi</Th>
+                      <Th align="right" className="w-[140px]">Aksi</Th>
                     </Tr>
                   </TableHead>
                   <TableBody>
@@ -753,7 +753,7 @@ export function PlanningScreen({ permissions }: { permissions: Permissions }) {
                   <div>
                     <div className="flex items-center justify-between border-b pb-2">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-slate-900">Rekomendasi Pengadaan & Produksi</h3>
+                        <h3 className="font-semibold text-slate-900">Rekomendasi Procurement & Produksi (PO / MO)</h3>
                         <span className="text-xs text-slate-500">
                           ({selectedRun.recommendations.length} item)
                         </span>
@@ -771,11 +771,11 @@ export function PlanningScreen({ permissions }: { permissions: Permissions }) {
                       </p>
                     ) : (
                       <>
-                        <div className="mt-3 overflow-x-auto">
+                        <div className="mt-3 rounded-md border border-slate-200 overflow-hidden">
                           <Table>
                             <TableHead>
                               <Tr>
-                                <Th className="w-[200px]">Barang</Th>
+                                <Th className="w-[200px]">Item</Th>
                                 <Th className="w-[120px]">Supply Type</Th>
                                 <Th align="right" className="w-[120px]">Kuantitas</Th>
                                 <Th className="w-[130px]">Dibutuhkan</Th>
@@ -801,7 +801,7 @@ export function PlanningScreen({ permissions }: { permissions: Permissions }) {
                                           : "bg-emerald-50 text-emerald-700 border border-emerald-200"
                                       }`}
                                     >
-                                      {recommendation.supplyType === "BUY" ? "Beli (PO)" : "Buat (MO)"}
+                                      {recommendation.supplyType === "BUY" ? "BUY (PO)" : "MAKE (MO)"}
                                     </span>
                                   </Td>
                                   <Td align="right" className="tnum font-medium text-slate-800">
@@ -863,15 +863,15 @@ export function PlanningScreen({ permissions }: { permissions: Permissions }) {
                       ) : null}
                     </div>
 
-                    <div className="mt-3 overflow-x-auto">
+                    <div className="mt-3 rounded-md border border-slate-200 overflow-hidden">
                       <Table>
                         <TableHead>
                           <Tr>
                             <Th className="w-[120px]">Tanggal</Th>
-                            <Th>Barang</Th>
+                            <Th>Item</Th>
                             <Th align="right" className="w-[120px]">Gross Req</Th>
-                            <Th align="right" className="w-[120px]">Penerimaan</Th>
-                            <Th align="right" className="w-[130px]">Proyeksi Stok</Th>
+                            <Th align="right" className="w-[120px]">Sched Receipts</Th>
+                            <Th align="right" className="w-[130px]">Projected Avail</Th>
                             <Th align="right" className="w-[120px]">Net Req</Th>
                           </Tr>
                         </TableHead>

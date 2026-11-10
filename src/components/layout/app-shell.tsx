@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { SidebarContent, type SessionUser } from "@/components/layout/sidebar";
@@ -16,17 +16,19 @@ function titleForPath(pathname: string): string {
     .replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
-const dateLabel = new Intl.DateTimeFormat("id-ID", {
-  timeZone: "Asia/Jakarta",
-  weekday: "long",
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-}).format(new Date());
-
 export function AppShell({ user, children }: { user: SessionUser; children: React.ReactNode }) {
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const dateLabel = useMemo(() => {
+    return new Intl.DateTimeFormat("id-ID", {
+      timeZone: "Asia/Jakarta",
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).format(new Date());
+  }, []);
 
   useEffect(() => {
     setDrawerOpen(false);
@@ -108,7 +110,7 @@ export function AppShell({ user, children }: { user: SessionUser; children: Reac
             </div>
           </header>
 
-          <main className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-5 md:px-6 md:py-6">{children}</main>
+          <main id="main-content" className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-5 md:px-6 md:py-6">{children}</main>
         </div>
       </div>
     </div>

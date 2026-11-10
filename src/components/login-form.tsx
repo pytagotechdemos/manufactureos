@@ -75,6 +75,26 @@ export function LoginForm() {
         {isSubmitting ? null : <ArrowRight aria-hidden className="size-4" />}
       </Button>
 
+      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3.5 text-xs">
+        <div className="flex items-center justify-between">
+          <span className="font-semibold text-slate-800">Akun Super Admin</span>
+          <button
+            type="button"
+            onClick={() => {
+              setEmail("admin@manufactureos.local");
+              setPassword("ManufactureOS2026!");
+            }}
+            className="font-medium text-brand-600 hover:text-brand-700 hover:underline cursor-pointer"
+          >
+            Gunakan Akun Ini
+          </button>
+        </div>
+        <div className="mt-2 space-y-1 font-mono text-[11px] text-slate-600">
+          <p>Email: <span className="font-semibold text-slate-900 select-all">admin@manufactureos.local</span></p>
+          <p>Password: <span className="font-semibold text-slate-900 select-all">ManufactureOS2026!</span></p>
+        </div>
+      </div>
+
       <p className="text-center text-[12px] text-slate-600">
         Kesulitan masuk? Hubungi administrator sistem Anda.
       </p>

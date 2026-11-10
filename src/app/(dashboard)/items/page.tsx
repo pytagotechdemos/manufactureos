@@ -72,16 +72,16 @@ function StatCard({ label, value, hint }: { label: string; value: number; hint: 
 }
 
 const itemTypeLabels: Record<string, string> = {
-  RAW_MATERIAL: "Bahan baku",
-  PURCHASED_COMPONENT: "Komponen pembelian",
+  RAW_MATERIAL: "Raw Material",
+  PURCHASED_COMPONENT: "Component",
   SUB_ASSEMBLY: "Sub-assembly",
-  FINISHED_GOODS: "Barang jadi",
-  CONSUMABLE: "Konsumsi",
+  FINISHED_GOODS: "Finished Goods",
+  CONSUMABLE: "Consumable",
 };
 
 const supplyTypeLabels: Record<string, string> = {
-  BUY: "Beli",
-  MAKE: "Buat sendiri",
+  BUY: "BUY (Beli)",
+  MAKE: "MAKE (Produksi)",
 };
 
 export default function ItemsPage() {
@@ -149,7 +149,7 @@ export default function ItemsPage() {
       for (let index = 0; index < offsets.length; index += 10) {
         pages.push(...await Promise.all(offsets.slice(index, index + 10).map(async (offset) => {
           const response = await fetch(`/api/v1/items?limit=100&offset=${offset}`);
-          if (!response.ok) throw new Error("Gagal memuat seluruh daftar barang");
+          if (!response.ok) throw new Error("Gagal memuat seluruh daftar Item Master");
           return response.json();
         })));
       }
@@ -194,14 +194,14 @@ export default function ItemsPage() {
 
   function exportItemsCsv() {
     downloadCsv(
-      `daftar-barang-${todayJakarta()}.csv`,
+      `item-master-${todayJakarta()}.csv`,
       [
         "SKU",
-        "Nama Barang",
+        "Nama Item",
         "Kategori",
-        "Tipe Barang",
-        "Pengadaan",
-        "Satuan Dasar",
+        "Item Type",
+        "Supply Type",
+        "Satuan Dasar (Base UOM)",
         "Biaya Standar",
         "Lead Time (Hari)",
         "Reorder Point",
@@ -310,12 +310,12 @@ export default function ItemsPage() {
         }),
       });
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal membuat barang");
-      setNotice(`Barang ${formSku} berhasil dibuat.`);
+      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal membuat Item Master");
+      setNotice(`Item ${formSku} berhasil dibuat.`);
       closeForm();
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal membuat barang");
+      setError(err instanceof Error ? err.message : "Gagal membuat Item Master");
     } finally {
       setSaving(false);
     }
@@ -344,12 +344,12 @@ export default function ItemsPage() {
         }),
       });
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal memperbarui barang");
-      setNotice(`Barang ${editingItem.sku} berhasil diperbarui.`);
+      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal memperbarui item");
+      setNotice(`Item ${editingItem.sku} berhasil diperbarui.`);
       closeForm();
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memperbarui barang");
+      setError(err instanceof Error ? err.message : "Gagal memperbarui item");
     } finally {
       setSaving(false);
     }
@@ -430,7 +430,7 @@ export default function ItemsPage() {
       <PageHeader
         eyebrow="Master Data"
         title="Item Master & Satuan (UOM)"
-        description="Kelola bahan baku, komponen pembelian, sub-assembly, barang jadi, serta konversi rasio antar satuan (UOM)."
+        description="Kelola bahan baku, komponen pembelian, sub-assembly, Finished Goods, serta konversi rasio antar satuan (UOM)."
         actions={
           activeTab === "items" ? (
             <div className="flex items-center gap-2">
@@ -444,7 +444,7 @@ export default function ItemsPage() {
               />
               <Button variant="primary" onClick={openCreate}>
                 <Plus aria-hidden className="size-4" />
-                Tambah barang
+                Tambah Item Master
               </Button>
             </div>
           ) : (
@@ -459,44 +459,44 @@ export default function ItemsPage() {
       {error ? <Alert tone="danger" onClose={() => setError(null)}>{error}</Alert> : null}
       {notice ? <Alert tone="success" onClose={() => setNotice(null)}>{notice}</Alert> : null}
 
-      <div className="flex border-b border-slate-200 gap-6">
+      <div className="flex border-b border-slate-200 gap-6 overflow-x-auto scroll-area">
         <button
           type="button"
           onClick={() => setActiveTab("items")}
-          className={`pb-3 text-sm font-semibold transition-colors border-b-2 -mb-px ${
+          className={`pb-3 text-sm font-semibold transition-colors border-b-2 -mb-px shrink-0 whitespace-nowrap ${
             activeTab === "items"
               ? "border-brand-600 text-brand-600"
               : "border-transparent text-slate-500 hover:text-slate-800"
           }`}
         >
-          Data Barang ({items.length})
+          Item Master ({items.length})
         </button>
         <button
           type="button"
           onClick={() => setActiveTab("conversions")}
-          className={`pb-3 text-sm font-semibold transition-colors border-b-2 -mb-px ${
+          className={`pb-3 text-sm font-semibold transition-colors border-b-2 -mb-px shrink-0 whitespace-nowrap ${
             activeTab === "conversions"
               ? "border-brand-600 text-brand-600"
               : "border-transparent text-slate-500 hover:text-slate-800"
           }`}
         >
-          Konversi Satuan ({conversions.length})
+          Konversi Satuan (UOM) ({conversions.length})
         </button>
       </div>
 
       {activeTab === "items" ? (
         <>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard label="Total barang" value={stats.total} hint="Seluruh status" />
-            <StatCard label="Aktif" value={stats.active} hint="Dapat dipakai transaksi" />
-            <StatCard label="Dibeli" value={stats.bought} hint="Supply type BUY" />
-            <StatCard label="Dibuat sendiri" value={stats.made} hint="Supply type MAKE" />
+            <StatCard label="Total Item Master" value={stats.total} hint="Seluruh status item" />
+            <StatCard label="Item Master Aktif" value={stats.active} hint="Siap dipakai transaksi" />
+            <StatCard label="Supply Type BUY" value={stats.bought} hint="Komponen & bahan beli (PO)" />
+            <StatCard label="Supply Type MAKE" value={stats.made} hint="Produk & sub-assy produksi (MO)" />
           </div>
 
       {formMode === "create" ? (
         <Card>
           <CardHeader
-            title="Tambah barang"
+            title="Tambah Item Master"
             description="Field bertanda bintang wajib diisi. Kategori dan satuan harus berstatus aktif."
           />
           <CardBody>
@@ -511,7 +511,7 @@ export default function ItemsPage() {
                     onChange={(event) => setFormSku(event.target.value)}
                   />
                 </Field>
-                <Field label="Nama barang" required>
+                <Field label="Nama Item" required>
                   <Input
                     name="name"
                     placeholder="Pelat baja 2 mm"
@@ -551,32 +551,32 @@ export default function ItemsPage() {
                     ))}
                   </Select>
                 </Field>
-                <Field label="Tipe barang" required>
+                <Field label="Item Type" required>
                   <Select
                     name="itemType"
                     required
                     value={formItemType}
                     onChange={(event) => setFormItemType(event.target.value)}
                   >
-                    <option value="RAW_MATERIAL">Bahan baku</option>
-                    <option value="PURCHASED_COMPONENT">Komponen pembelian</option>
+                    <option value="RAW_MATERIAL">Raw Material (Bahan Baku)</option>
+                    <option value="PURCHASED_COMPONENT">Component (Komponen Beli)</option>
                     <option value="SUB_ASSEMBLY">Sub-assembly</option>
-                    <option value="FINISHED_GOODS">Barang jadi</option>
-                    <option value="CONSUMABLE">Konsumsi</option>
+                    <option value="FINISHED_GOODS">Finished Goods (Barang Jadi)</option>
+                    <option value="CONSUMABLE">Consumable (Bahan Pembantu)</option>
                   </Select>
                 </Field>
-                <Field label="Cara pengadaan" required>
+                <Field label="Supply Type" required>
                   <Select
                     name="supplyType"
                     required
                     value={formSupplyType}
                     onChange={(event) => setFormSupplyType(event.target.value)}
                   >
-                    <option value="BUY">Beli</option>
-                    <option value="MAKE">Buat sendiri</option>
+                    <option value="BUY">BUY — Dibeli dari Supplier</option>
+                    <option value="MAKE">MAKE — Diproduksi Sendiri (MO)</option>
                   </Select>
                 </Field>
-                <Field label="Satuan dasar" required>
+                <Field label="Satuan dasar (Base UOM)" required>
                   <Select
                     name="baseUomId"
                     required
@@ -591,7 +591,7 @@ export default function ItemsPage() {
                     ))}
                   </Select>
                 </Field>
-                <Field label="Biaya material standar" hint="Opsional, dalam Rupiah.">
+                <Field label="Biaya material standar (Standard Cost)" hint="Opsional, dalam Rupiah.">
                   <Input
                     name="standardMaterialCost"
                     type="number"
@@ -601,7 +601,7 @@ export default function ItemsPage() {
                     onChange={(event) => setFormStandardCost(event.target.value)}
                   />
                 </Field>
-                <Field label="Titik pemesanan ulang">
+                <Field label="Reorder Point (ROP)">
                   <Input
                     name="reorderPoint"
                     type="number"
@@ -611,7 +611,7 @@ export default function ItemsPage() {
                     onChange={(event) => setFormReorderPoint(event.target.value)}
                   />
                 </Field>
-                <Field label="Safety stock">
+                <Field label="Safety Stock">
                   <Input
                     name="safetyStock"
                     type="number"
@@ -621,7 +621,7 @@ export default function ItemsPage() {
                     onChange={(event) => setFormSafetyStock(event.target.value)}
                   />
                 </Field>
-                <Field label="Lead time (hari)">
+                <Field label="Purchasing Lead Time (Hari)">
                   <Input
                     name="purchasingLeadDays"
                     type="number"
@@ -631,7 +631,7 @@ export default function ItemsPage() {
                     onChange={(event) => setFormLeadDays(event.target.value)}
                   />
                 </Field>
-                <Field label="Minimum order qty">
+                <Field label="Minimum Order Qty (MOQ)">
                   <Input
                     name="minimumOrderQty"
                     type="number"
@@ -641,7 +641,7 @@ export default function ItemsPage() {
                     onChange={(event) => setFormMinOrderQty(event.target.value)}
                   />
                 </Field>
-                <Field label="Kelipatan lot size">
+                <Field label="Lot Size Multiple">
                   <Input
                     name="lotSizeMultiple"
                     type="number"
@@ -662,7 +662,7 @@ export default function ItemsPage() {
               </Field>
               <div className="flex flex-wrap gap-2">
                 <Button type="submit" variant="primary" loading={saving}>
-                  {saving ? "Menyimpan…" : "Simpan barang"}
+                  {saving ? "Menyimpan…" : "Simpan item"}
                 </Button>
                 <Button type="button" variant="secondary" onClick={closeForm} disabled={saving}>
                   Batal
@@ -676,7 +676,7 @@ export default function ItemsPage() {
       {formMode === "edit" && editingItem ? (
         <Card>
           <CardHeader
-            title={`Ubah data barang: ${editingItem.sku}`}
+            title={`Ubah data item: ${editingItem.sku}`}
             description={`Parameter biaya standar, lead time, lot sizing, dan status untuk ${editingItem.name}.`}
           />
           <CardBody>
@@ -685,13 +685,13 @@ export default function ItemsPage() {
                 <Field label="SKU" hint="SKU tidak dapat diubah setelah dibuat.">
                   <Input name="sku" disabled value={editingItem.sku} />
                 </Field>
-                <Field label="Tipe barang" hint="Tipe barang terkunci.">
+                <Field label="Item Type" hint="Item Type terkunci.">
                   <Input name="itemType" disabled value={itemTypeLabels[editingItem.itemType] ?? editingItem.itemType} />
                 </Field>
-                <Field label="Satuan dasar" hint="Satuan dasar terkunci demi integritas ledger.">
+                <Field label="Satuan dasar (Base UOM)" hint="Satuan dasar terkunci demi integritas ledger.">
                   <Input name="baseUom" disabled value={editingItem.baseUom?.code ?? "—"} />
                 </Field>
-                <Field label="Nama barang" required>
+                <Field label="Nama Item" required>
                   <Input
                     name="name"
                     required
@@ -741,7 +741,7 @@ export default function ItemsPage() {
                     <option value="INACTIVE">Tidak aktif</option>
                   </Select>
                 </Field>
-                <Field label="Biaya material standar" hint="Dalam Rupiah untuk estimasi costing BOM.">
+                <Field label="Biaya material standar (Standard Cost)" hint="Dalam Rupiah untuk estimasi costing BOM.">
                   <Input
                     name="standardMaterialCost"
                     type="number"
@@ -751,7 +751,7 @@ export default function ItemsPage() {
                     onChange={(event) => setFormStandardCost(event.target.value)}
                   />
                 </Field>
-                <Field label="Titik pemesanan ulang">
+                <Field label="Reorder Point (ROP)">
                   <Input
                     name="reorderPoint"
                     type="number"
@@ -761,7 +761,7 @@ export default function ItemsPage() {
                     onChange={(event) => setFormReorderPoint(event.target.value)}
                   />
                 </Field>
-                <Field label="Safety stock" hint="Kebutuhan minimum yang dijaga oleh MRP.">
+                <Field label="Safety Stock" hint="Kebutuhan minimum yang dijaga oleh MRP.">
                   <Input
                     name="safetyStock"
                     type="number"
@@ -771,7 +771,7 @@ export default function ItemsPage() {
                     onChange={(event) => setFormSafetyStock(event.target.value)}
                   />
                 </Field>
-                <Field label="Lead time (hari)" hint="Waktu pengadaan atau produksi.">
+                <Field label="Purchasing Lead Time (Hari)" hint="Waktu pengadaan atau produksi.">
                   <Input
                     name="purchasingLeadDays"
                     type="number"
@@ -781,7 +781,7 @@ export default function ItemsPage() {
                     onChange={(event) => setFormLeadDays(event.target.value)}
                   />
                 </Field>
-                <Field label="Minimum order qty" hint="MOQ untuk run MRP.">
+                <Field label="Minimum Order Qty (MOQ)" hint="MOQ untuk run MRP.">
                   <Input
                     name="minimumOrderQty"
                     type="number"
@@ -791,7 +791,7 @@ export default function ItemsPage() {
                     onChange={(event) => setFormMinOrderQty(event.target.value)}
                   />
                 </Field>
-                <Field label="Kelipatan lot size" hint="Lot sizing kelipatan batch pada MRP.">
+                <Field label="Lot Size Multiple" hint="Lot sizing kelipatan batch pada MRP.">
                   <Input
                     name="lotSizeMultiple"
                     type="number"
@@ -825,8 +825,8 @@ export default function ItemsPage() {
 
       <Card>
         <CardHeader
-          title="Daftar barang"
-          description={`${filtered.length} dari ${items.length} barang ditampilkan.`}
+          title="Daftar Item Master"
+          description={`${filtered.length} dari ${items.length} item ditampilkan.`}
           actions={
             <div className="flex items-center gap-2">
               <SearchInput value={search} onChange={setSearch} placeholder="Cari SKU, nama, kategori…" />
@@ -835,7 +835,7 @@ export default function ItemsPage() {
                 size="sm"
                 onClick={exportItemsCsv}
                 disabled={filtered.length === 0}
-                title="Unduh seluruh daftar barang sebagai file CSV"
+                title="Unduh seluruh daftar item sebagai file CSV"
               >
                 <Download aria-hidden className="size-3.5" />
                 Ekspor CSV
@@ -845,11 +845,11 @@ export default function ItemsPage() {
         />
         <CardBody className="p-0">
           {loading ? (
-            <div className="p-8 text-center text-slate-500">Memuat data barang…</div>
+            <div className="p-8 text-center text-slate-500">Memuat data Item Master…</div>
           ) : filtered.length === 0 ? (
             <EmptyState
-              title="Belum ada barang yang cocok"
-              description="Ubah kata kunci pencarian atau tambahkan barang baru."
+              title="Belum ada item yang cocok"
+              description="Ubah kata kunci pencarian atau tambahkan item baru."
             />
           ) : (
             <>
@@ -859,13 +859,13 @@ export default function ItemsPage() {
                     <Th className="w-[130px]">SKU</Th>
                     <Th>Nama Item</Th>
                     <Th className="w-[140px]">Kategori</Th>
-                    <Th className="w-[130px]">Tipe Item</Th>
+                    <Th className="w-[130px]">Item Type</Th>
                     <Th className="w-[110px]">Supply Type</Th>
                     <Th align="right" className="w-[70px]">UOM</Th>
                     <Th align="right" className="w-[120px]">Biaya Std</Th>
                     <Th align="right" className="w-[90px]">Lead Time</Th>
                     <Th className="w-[100px]">Status</Th>
-                    <Th align="right" className="w-[130px]">Aksi</Th>
+                    <Th align="right" className="w-[180px]">Aksi</Th>
                   </Tr>
                 </TableHead>
                 <TableBody>
@@ -894,7 +894,7 @@ export default function ItemsPage() {
                             variant="ghost"
                             size="sm"
                             aria-label={`Riwayat & Siklus Hidup ${item.sku}`}
-                            title="Lihat riwayat siklus hidup & audit log barang"
+                            title="Lihat riwayat siklus hidup & audit log item"
                             onClick={() => setLifecycleItem(item)}
                           >
                             <History aria-hidden className="size-4" />
@@ -903,7 +903,7 @@ export default function ItemsPage() {
                             variant="ghost"
                             size="sm"
                             aria-label={`Edit ${item.sku}`}
-                            title="Edit data barang"
+                            title="Edit data item"
                             onClick={() => openEdit(item)}
                           >
                             <Edit aria-hidden className="size-4" />
@@ -1044,12 +1044,12 @@ export default function ItemsPage() {
             <Table>
               <TableHead>
                 <Tr>
-                  <Th>Satuan Asal</Th>
-                  <Th>Satuan Tujuan</Th>
-                  <Th>Dimensi</Th>
-                  <Th align="right">Faktor Pengali</Th>
-                  <Th align="right">Hubungan Konversi</Th>
-                  <Th align="right">Aksi</Th>
+                  <Th className="w-[180px]">Satuan Asal</Th>
+                  <Th className="w-[180px]">Satuan Tujuan</Th>
+                  <Th className="w-[120px]">Dimensi</Th>
+                  <Th align="right" className="w-[130px]">Faktor Pengali</Th>
+                  <Th align="right" className="w-[180px]">Hubungan Konversi</Th>
+                  <Th align="right" className="w-[90px]">Aksi</Th>
                 </Tr>
               </TableHead>
               <TableBody>

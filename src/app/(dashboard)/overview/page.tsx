@@ -11,15 +11,15 @@ import { StatusBadge } from "@/components/ui/badge";
 import { formatQuantity } from "@/lib/format";
 
 export const metadata: Metadata = {
-  title: "Ringkasan",
+  title: "Overview Operasional",
 };
 
 const itemTypeLabels: Record<string, string> = {
-  RAW_MATERIAL: "Bahan baku",
-  PURCHASED_COMPONENT: "Komponen beli",
+  RAW_MATERIAL: "Raw Material",
+  PURCHASED_COMPONENT: "Component",
   SUB_ASSEMBLY: "Sub-assembly",
-  FINISHED_GOODS: "Barang jadi",
-  CONSUMABLE: "Konsumsi",
+  FINISHED_GOODS: "Finished Goods",
+  CONSUMABLE: "Consumable",
 };
 
 export default async function OverviewPage() {
@@ -55,7 +55,7 @@ export default async function OverviewPage() {
     <div className="space-y-5">
       <PageHeader
         eyebrow="Dashboard"
-        title="Ringkasan Operasional"
+        title="Overview Operasional"
         description={`Selamat datang kembali, ${user.name}. Pantau status terkini produksi, inventory, dan supply chain.`}
         actions={
           <div className="flex flex-wrap items-center gap-2">
@@ -79,7 +79,7 @@ export default async function OverviewPage() {
         <Stat
           href="/items"
           label="Item Master Aktif"
-          hint="Data master barang & material →"
+          hint="Data master item & material →"
           value={itemsCount}
         />
         <Stat
@@ -103,7 +103,7 @@ export default async function OverviewPage() {
         />
       </StatGrid>
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid gap-5 xl:grid-cols-2">
         <Card>
           <CardHeader
             title="Manufacturing Orders Terkini"
@@ -121,17 +121,17 @@ export default async function OverviewPage() {
             <Table>
               <TableHead>
                 <Tr>
-                  <Th className="w-[140px]">Nomor MO</Th>
+                  <Th className="w-[130px]">Nomor MO</Th>
                   <Th>Item / Produk</Th>
-                  <Th align="right" className="w-[80px]">Target Qty</Th>
-                  <Th className="w-[120px]">Status</Th>
+                  <Th align="right" className="w-[80px]">Target</Th>
+                  <Th className="w-[100px]">Status</Th>
                 </Tr>
               </TableHead>
               <TableBody>
                 {recentOrders.length === 0 ? (
                   <Tr>
                     <Td colSpan={4}>
-                      <EmptyState compact title="Belum ada Manufacturing Order" description="Buat pesanan produksi melalui modul Perencanaan atau Produksi." />
+                      <EmptyState compact title="Belum ada Manufacturing Order (MO)" description="Buat Manufacturing Order melalui modul Planning & MRP atau Manufacturing." />
                     </Td>
                   </Tr>
                 ) : (
@@ -146,8 +146,8 @@ export default async function OverviewPage() {
                         </Link>
                       </Td>
                       <Td className="text-slate-800 text-xs">
-                        <div className="font-semibold">{order.item.sku}</div>
-                        <div className="text-slate-500 truncate max-w-[200px]">{order.item.name}</div>
+                        <div className="font-semibold font-mono text-[11px] text-slate-700">{order.item.sku}</div>
+                        <div className="text-slate-500 truncate max-w-[180px] text-[11px]">{order.item.name}</div>
                       </Td>
                       <Td align="right" className="tnum text-slate-900 font-medium text-xs whitespace-nowrap">
                         {formatQuantity(order.quantity.toString())}
@@ -164,7 +164,7 @@ export default async function OverviewPage() {
         <Card>
           <CardHeader
             title="Item Master Terbaru"
-            description="Barang dan komponen yang baru ditambahkan."
+            description="Item Master dan komponen yang baru ditambahkan."
             actions={
               <Link
                 href="/items"
@@ -178,32 +178,31 @@ export default async function OverviewPage() {
             <Table>
               <TableHead>
                 <Tr>
-                  <Th className="w-[120px]">SKU</Th>
-                  <Th>Nama Item</Th>
+                  <Th className="w-[160px]">SKU / Item</Th>
                   <Th className="w-[110px]">Tipe</Th>
-                  <Th align="right" className="w-[70px]">UOM</Th>
+                  <Th align="right" className="w-[60px]">UOM</Th>
                   <Th className="w-[90px]">Status</Th>
                 </Tr>
               </TableHead>
               <TableBody>
                 {recentItems.length === 0 ? (
                   <Tr>
-                    <Td colSpan={5}>
-                      <EmptyState compact title="Belum ada data barang" description="Tambahkan barang dari menu Item Master." />
+                    <Td colSpan={4}>
+                      <EmptyState compact title="Belum ada data item" description="Tambahkan item dari menu Item Master." />
                     </Td>
                   </Tr>
                 ) : (
                   recentItems.map((item) => (
                     <Tr key={item.id}>
-                      <Td className="font-semibold text-brand-600 font-mono text-xs whitespace-nowrap">
+                      <Td className="text-slate-800 text-xs">
                         <Link
                           href={`/items?sku=${encodeURIComponent(item.sku)}`}
-                          className="hover:underline"
+                          className="font-semibold text-brand-600 font-mono hover:underline block"
                         >
                           {item.sku}
                         </Link>
+                        <div className="text-slate-500 truncate max-w-[180px] text-[11px]">{item.name}</div>
                       </Td>
-                      <Td className="text-slate-800 text-xs font-medium truncate max-w-[150px]">{item.name}</Td>
                       <Td className="text-slate-600 text-xs whitespace-nowrap">{itemTypeLabels[item.itemType] ?? item.itemType.replace(/_/g, " ")}</Td>
                       <Td align="right" className="font-mono text-slate-600 text-xs whitespace-nowrap">
                         {item.baseUom?.code ?? "—"}
@@ -231,7 +230,7 @@ export default async function OverviewPage() {
             >
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 group-hover:text-brand-600">1. Engineering</p>
               <h4 className="mt-1 font-semibold text-slate-900">Bill of Materials (BOM)</h4>
-              <p className="mt-1 text-xs text-slate-500">Definisikan formula barang jadi, sub-assembly, dan komponen bahan baku.</p>
+              <p className="mt-1 text-xs text-slate-500">Definisikan formula Finished Goods, sub-assembly, dan komponen bahan baku.</p>
             </Link>
 
             <Link
@@ -240,7 +239,7 @@ export default async function OverviewPage() {
             >
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 group-hover:text-brand-600">2. MRP Planning</p>
               <h4 className="mt-1 font-semibold text-slate-900">Kalkulasi MRP & Demand</h4>
-              <p className="mt-1 text-xs text-slate-500">Hitung kebutuhan bersih bahan dan jadwalkan rilis pesanan tepat waktu.</p>
+              <p className="mt-1 text-xs text-slate-500">Hitung kebutuhan bersih bahan dan jadwalkan rilis PO / MO tepat waktu.</p>
             </Link>
 
             <Link
@@ -249,7 +248,7 @@ export default async function OverviewPage() {
             >
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 group-hover:text-brand-600">3. Supply Chain</p>
               <h4 className="mt-1 font-semibold text-slate-900">Procurement & GRN</h4>
-              <p className="mt-1 text-xs text-slate-500">Terbitkan PO ke supplier dan terima barang masuk (GRN) ke gudang utama.</p>
+              <p className="mt-1 text-xs text-slate-500">Terbitkan PO ke supplier dan terima barang masuk (GRN) ke gudang.</p>
             </Link>
 
             <Link
@@ -276,7 +275,7 @@ export default async function OverviewPage() {
             >
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 group-hover:text-brand-600">6. Production Receipts</p>
               <h4 className="mt-1 font-semibold text-slate-900">Penerimaan Produksi</h4>
-              <p className="mt-1 text-xs text-slate-500">Posting barang jadi hasil QC ke stok gudang barang jadi.</p>
+              <p className="mt-1 text-xs text-slate-500">Posting Finished Goods hasil QC ke gudang Finished Goods.</p>
             </Link>
 
             <Link
@@ -294,7 +293,7 @@ export default async function OverviewPage() {
             >
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 group-hover:text-brand-600">8. Costing & Finance</p>
               <h4 className="mt-1 font-semibold text-slate-900">Costing & Analisis Variansi</h4>
-              <p className="mt-1 text-xs text-slate-500">Bandingkan biaya estimasi vs aktual serta valuasi nilai persediaan bergerak.</p>
+              <p className="mt-1 text-xs text-slate-500">Bandingkan estimasi vs aktual cost serta Moving Average Inventory Valuation.</p>
             </Link>
           </div>
         </CardBody>

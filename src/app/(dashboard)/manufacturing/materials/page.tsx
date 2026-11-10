@@ -84,14 +84,14 @@ export default function MaterialsPage() {
     try {
       const res = await fetch("/api/v1/manufacturing/orders?limit=100&offset=0");
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal memuat pesanan produksi");
+      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal memuat Manufacturing Order (MO)");
       const total = Number(json.page?.total ?? json.data?.length ?? 0);
       const offsets = Array.from({ length: Math.max(0, Math.ceil(total / 100) - 1) }, (_, index) => (index + 1) * 100);
       const pages: Array<{ data?: MoSummary[] }> = [];
       for (let index = 0; index < offsets.length; index += 10) {
         pages.push(...await Promise.all(offsets.slice(index, index + 10).map(async (offset) => {
           const response = await fetch(`/api/v1/manufacturing/orders?limit=100&offset=${offset}`);
-          if (!response.ok) throw new Error("Gagal memuat seluruh pesanan produksi");
+          if (!response.ok) throw new Error("Gagal memuat seluruh Manufacturing Order (MO)");
           return response.json();
         })));
       }
@@ -111,7 +111,7 @@ export default function MaterialsPage() {
         return rows.find((row) => ACTIVE_STATUSES.includes(row.status))?.id ?? rows[0]?.id ?? "";
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memuat pesanan produksi");
+      setError(err instanceof Error ? err.message : "Gagal memuat Manufacturing Order (MO)");
     } finally {
       setLoading(false);
     }
@@ -127,10 +127,10 @@ export default function MaterialsPage() {
     try {
       const res = await fetch(`/api/v1/manufacturing/orders/${orderId}`);
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal memuat material pesanan");
+      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal memuat material MO");
       setDetail(json.data ?? null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memuat material pesanan");
+      setError(err instanceof Error ? err.message : "Gagal memuat material MO");
     } finally {
       setDetailLoading(false);
     }
@@ -153,13 +153,13 @@ export default function MaterialsPage() {
     if (!detail || detail.materials.length === 0) return;
     const headers = [
       "No",
-      "SKU Bahan",
-      "Nama Bahan",
-      "Satuan",
-      "Rencana",
-      "Terbit",
-      "Konsumsi",
-      "Kembali",
+      "SKU Material",
+      "Nama Material",
+      "UOM",
+      "Planned Qty",
+      "Issued Qty",
+      "Consumed Qty",
+      "Returned Qty",
       "Sisa WIP",
       "Nomor MO",
     ];
@@ -239,8 +239,8 @@ export default function MaterialsPage() {
       <div className="grid gap-5 xl:grid-cols-3">
         <Card className="xl:col-span-2">
           <CardHeader
-            title="Bahan pesanan"
-            description="Menerbitkan bahan memindahkan stok dari gudang sumber ke gudang WIP."
+            title="Daftar Material MO"
+            description="Menerbitkan (Issue) material memindahkan stok dari gudang sumber ke gudang WIP produksi."
             actions={
               detail && detail.materials.length > 0 ? (
                 <Button variant="secondary" size="sm" onClick={exportMaterialsCsv}>
@@ -270,8 +270,8 @@ export default function MaterialsPage() {
             ) : detail.materials.length === 0 ? (
               <EmptyState
                 compact
-                title="Pesanan ini tidak memiliki material"
-                description="Material dibuat saat pesanan produksi dibuat dari rekomendasi MRP."
+                title="Manufacturing Order ini tidak memiliki material"
+                description="Material dibuat saat Manufacturing Order (MO) dibuat dari rekomendasi MRP."
               />
             ) : (
               <>
@@ -330,7 +330,7 @@ export default function MaterialsPage() {
 
         <Card>
           <CardHeader
-            title="Kelola material"
+            title="Kelola Material"
             description={
               selectedMaterial
                 ? `${selectedMaterial.item.sku} · sisa WIP ${formatQuantity(remainingWip(selectedMaterial).toString())} ${selectedMaterial.uomCode}`
@@ -370,7 +370,7 @@ export default function MaterialsPage() {
                       "issue",
                       issueQty,
                       <span>
-                        Bahan {selectedMaterial.item.sku} diterbitkan {issueQty} {selectedMaterial.uomCode}.{" "}
+                        Material {selectedMaterial.item.sku} diterbitkan {issueQty} {selectedMaterial.uomCode}.{" "}
                         <Link
                           href={`/manufacturing/work-orders?mo=${detail.number}`}
                           className="ml-1 font-semibold underline underline-offset-2 hover:text-emerald-950"
@@ -382,7 +382,7 @@ export default function MaterialsPage() {
                   }}
                 >
                   <Field
-                    label="Terbitkan bahan"
+                    label="Terbitkan Material (Issue to WIP)"
                     required
                     hint={`Sisa yang belum diterbitkan ${formatQuantity(remainingIssue(selectedMaterial).toString())} ${selectedMaterial.uomCode}.`}
                   >
@@ -406,7 +406,7 @@ export default function MaterialsPage() {
                     Terbitkan ke WIP
                   </Button>
                   {!canIssue ? (
-                    <p className="text-[12px] text-slate-500">Penerbitan bahan tersedia pada status RELEASED atau IN_PROGRESS.</p>
+                    <p className="text-[12px] text-slate-500">Penerbitan material tersedia pada status RELEASED atau IN_PROGRESS.</p>
                   ) : null}
                 </form>
 
@@ -431,7 +431,7 @@ export default function MaterialsPage() {
                   }}
                 >
                   <Field
-                    label="Catat konsumsi"
+                    label="Catat Konsumsi Material"
                     required
                     hint={`Maksimal ${formatQuantity(remainingWip(selectedMaterial).toString())} ${selectedMaterial.uomCode}.`}
                   >
@@ -469,7 +469,7 @@ export default function MaterialsPage() {
                   }}
                 >
                   <Field
-                    label="Kembalikan sisa"
+                    label="Pengembalian Sisa ke Gudang (Return)"
                     required
                     hint={`Maksimal ${formatQuantity(remainingWip(selectedMaterial).toString())} ${selectedMaterial.uomCode}.`}
                   >
@@ -502,10 +502,10 @@ export default function MaterialsPage() {
       {detail && detail.materials.length > 0 && !canIssue ? (
         <Alert tone="info">
           {detail.status === "DRAFT" || detail.status === "PLANNED"
-            ? "Pesanan belum dirilis. Rilis pesanan produksi terlebih dahulu agar bahan dapat diterbitkan."
+            ? "Manufacturing Order (MO) belum dirilis. Rilis MO terlebih dahulu agar material dapat diterbitkan ke WIP."
             : detail.status === "COMPLETED" || detail.status === "CANCELLED"
-              ? `Pesanan berstatus ${detail.status}; seluruh transaksi bahan sudah ditutup.`
-              : `Pesanan berstatus ${detail.status}; penerbitan bahan baru tidak tersedia, namun konsumsi dan pengembalian masih dapat dicatat bila ada sisa WIP.`}
+              ? `Manufacturing Order berstatus ${detail.status}; seluruh transaksi material sudah ditutup.`
+              : `Manufacturing Order berstatus ${detail.status}; penerbitan material baru tidak tersedia, namun konsumsi dan pengembalian masih dapat dicatat bila ada sisa WIP.`}
         </Alert>
       ) : null}
     </div>

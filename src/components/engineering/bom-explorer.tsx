@@ -109,9 +109,9 @@ export function BomExplorer({ canApprove, canCreate }: { canApprove: boolean; ca
       "Baris",
       "SKU Komponen",
       "Nama Komponen",
-      "Tipe Pasok",
+      "Supply Type",
       "Kuantitas",
-      "Satuan",
+      "UOM",
       "Scrap Rate (%)",
       "Catatan",
     ];
@@ -119,7 +119,7 @@ export function BomExplorer({ canApprove, canCreate }: { canApprove: boolean; ca
       line.sequence,
       line.component.sku,
       line.component.name,
-      line.component.supplyType === "MAKE" ? "Buat Sendiri" : "Beli",
+      line.component.supplyType === "MAKE" ? "MAKE (Produksi)" : "BUY (Beli)",
       line.quantity,
       line.uom.code,
       Number(line.scrapRate) > 0 ? (Number(line.scrapRate) * 100).toFixed(2) : "0",
@@ -131,10 +131,10 @@ export function BomExplorer({ canApprove, canCreate }: { canApprove: boolean; ca
   function exportExplosionCsv() {
     if (!detail || !explosion || explosion.requirements.length === 0) return;
     const headers = [
-      "SKU Bahan",
-      "Nama Bahan",
-      "Kuantitas Bersih",
-      "Satuan",
+      "SKU Komponen",
+      "Nama Komponen",
+      "Net Quantity",
+      "UOM",
       "Target Output",
       "Nomor BOM",
       "Revisi",
@@ -309,7 +309,7 @@ export function BomExplorer({ canApprove, canCreate }: { canApprove: boolean; ca
               setSearch(val);
               setBomPage(1);
             }}
-            placeholder="Cari nomor BOM atau barang…"
+            placeholder="Cari nomor BOM atau SKU item…"
           />
         </div>
         <div className="w-48">
@@ -536,7 +536,7 @@ export function BomExplorer({ canApprove, canCreate }: { canApprove: boolean; ca
                       </Button>
                     ) : null}
                   </div>
-                  <div className="mt-2 overflow-x-auto rounded-md border border-slate-200">
+                  <div className="mt-2 rounded-md border border-slate-200 overflow-hidden">
                     <Table>
                       <TableHead>
                         <Tr>
@@ -564,7 +564,7 @@ export function BomExplorer({ canApprove, canCreate }: { canApprove: boolean; ca
                                     : "bg-blue-50 text-blue-700 border border-blue-200"
                                 }`}
                               >
-                                {line.component.supplyType === "MAKE" ? "Buat Sendiri" : "Beli"}
+                                {line.component.supplyType === "MAKE" ? "MAKE" : "BUY"}
                               </span>
                             </Td>
                             <Td align="right" className="tnum font-medium text-slate-700">

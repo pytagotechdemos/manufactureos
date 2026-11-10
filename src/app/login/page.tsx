@@ -14,7 +14,7 @@ const highlights = [
 
 export default function LoginPage() {
   return (
-    <main className="flex min-h-screen bg-canvas">
+    <main id="main-content" className="flex min-h-screen bg-canvas">
       <section className="relative hidden w-[46%] shrink-0 flex-col justify-between bg-slate-900 p-10 text-white lg:flex">
         <div
           aria-hidden

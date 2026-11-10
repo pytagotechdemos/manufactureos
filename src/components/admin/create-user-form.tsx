@@ -33,6 +33,24 @@ export function CreateUserForm() {
       .catch(() => setLoadingRoles(false));
   }, []);
 
+  useEffect(() => {
+    if (!open) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") handleClose();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const original = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = original;
+    };
+  }, [open]);
+
   function handleClose() {
     setOpen(false);
     setError(null);
@@ -74,19 +92,19 @@ export function CreateUserForm() {
         type="button"
         variant="primary"
       >
-        <Plus aria-hidden className="size-4 mr-2" />
+        <Plus aria-hidden className="size-4" />
         Tambah pengguna
       </Button>
 
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
           <div
             aria-hidden="true"
             className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
             onClick={handleClose}
           />
-          <div className="relative z-10 w-full max-w-lg">
-            <Card className="shadow-2xl">
+          <div className="relative z-10 w-full max-w-lg my-auto">
+            <Card className="shadow-2xl max-h-[90vh] flex flex-col">
               <CardHeader
                 actions={
                   <button
@@ -101,7 +119,7 @@ export function CreateUserForm() {
                 description="Pendaftaran publik dinonaktifkan — akun baru dibuat oleh administrator."
                 title="Tambah Pengguna"
               />
-              <CardBody className="space-y-4">
+              <CardBody className="space-y-4 overflow-y-auto">
                 {error ? <Alert tone="danger" onClose={() => setError(null)}>{error}</Alert> : null}
                 {notice ? <Alert tone="success" onClose={() => setNotice(null)}>{notice}</Alert> : null}
                 <form className="space-y-3" onSubmit={handleSubmit}>
@@ -151,7 +169,7 @@ export function CreateUserForm() {
                       Batal
                     </Button>
                     <Button disabled={submitting || !roleId} loading={submitting} type="submit" variant="primary">
-                      <Plus aria-hidden className="size-4 mr-2" />
+                      <Plus aria-hidden className="size-4" />
                       Buat akun
                     </Button>
                   </div>

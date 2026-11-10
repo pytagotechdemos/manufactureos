@@ -26,10 +26,10 @@ export function SupplierStatusButton({
         body: JSON.stringify({ status: nextStatus }),
       });
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal mengubah status pemasok");
+      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal mengubah status supplier");
       router.refresh();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Gagal mengubah status pemasok");
+      alert(err instanceof Error ? err.message : "Gagal mengubah status supplier");
     } finally {
       setLoading(false);
     }

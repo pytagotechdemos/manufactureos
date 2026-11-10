@@ -89,9 +89,9 @@ export default function QualityPage() {
     if (filteredPending.length === 0) return;
     const headers = [
       "Nomor MO",
-      "SKU Barang",
-      "Nama Barang",
-      "Target",
+      "SKU Item",
+      "Nama Item",
+      "Target Qty",
       "Diproduksi",
       "Diperiksa",
       "Sisa QC",
@@ -111,7 +111,7 @@ export default function QualityPage() {
         rew.toString(),
       ];
     });
-    downloadCsv(`pesanan-menunggu-qc-${todayJakarta()}.csv`, headers, rows);
+    downloadCsv(`antrean-qc-${todayJakarta()}.csv`, headers, rows);
   }
 
   const filteredInspections = useMemo(() => {
@@ -156,7 +156,7 @@ export default function QualityPage() {
       ins.inspectedAt ? formatDateTime(ins.inspectedAt) : "",
       ins.notes ?? "",
     ]);
-    downloadCsv(`riwayat-inspeksi-qc-${todayJakarta()}.csv`, headers, rows);
+    downloadCsv(`qc-inspections-${todayJakarta()}.csv`, headers, rows);
   }
 
   const load = useCallback(async () => {
@@ -360,7 +360,7 @@ export default function QualityPage() {
           Pemeriksaan {inspection.number} berhasil diposting.{" "}
           {hasAccepted ? (
             <>
-              Kuantitas yang diterima siap masuk ke stok barang jadi.{" "}
+              Kuantitas yang diterima (Accepted) siap dicatat ke stok Finished Goods.{" "}
               <Link
                 href={`/manufacturing/receipts?inspectionId=${inspection.id}`}
                 className="ml-1 font-semibold underline underline-offset-2 hover:text-emerald-950"
@@ -410,7 +410,7 @@ export default function QualityPage() {
               className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3.5 text-sm font-medium text-slate-700 shadow-xs transition-colors hover:bg-slate-50 hover:text-slate-900"
               href="/manufacturing/receipts"
             >
-              Terima barang jadi &rarr;
+              Penerimaan Produksi &rarr;
             </Link>
             <Button variant="secondary" onClick={() => { void load(); }} loading={loading}>
               Muat ulang
@@ -426,7 +426,7 @@ export default function QualityPage() {
         <Card className="xl:col-span-2">
           <CardHeader
             title="Antrean Inspeksi MO"
-            description={`${filteredPending.length} pesanan menunggu inspeksi kualitas.`}
+            description={`${filteredPending.length} Manufacturing Order menunggu inspeksi kualitas.`}
             actions={
               <div className="flex flex-wrap items-center gap-2">
                 <div className="w-56">
@@ -436,7 +436,7 @@ export default function QualityPage() {
                       setPendingSearch(val);
                       setPendingPage(1);
                     }}
-                    placeholder="Cari MO atau barang…"
+                    placeholder="Cari nomor MO atau item…"
                   />
                 </div>
                 {filteredPending.length > 0 ? (
@@ -449,14 +449,14 @@ export default function QualityPage() {
           />
           <CardBody className="p-0">
             {loading ? (
-              <div className="p-8 text-center text-slate-500">Memuat pesanan menunggu…</div>
+              <div className="p-8 text-center text-slate-500">Memuat antrean inspeksi MO…</div>
             ) : filteredPending.length === 0 ? (
               <EmptyState
-                title="Tidak ada pesanan menunggu pemeriksaan"
+                title="Tidak ada MO menunggu inspeksi QC"
                 description={
                   pendingSearch
-                    ? "Tidak ada pesanan cocok dengan pencarian."
-                    : "Pesanan produksi dengan output lantai pabrik akan muncul di sini."
+                    ? "Tidak ada MO cocok dengan pencarian."
+                    : "Manufacturing Order (MO) dengan output lantai pabrik akan muncul di sini."
                 }
               />
             ) : (
@@ -465,13 +465,13 @@ export default function QualityPage() {
                   <TableHead>
                     <Tr>
                       <Th className="w-[140px]">Nomor MO</Th>
-                      <Th>Barang</Th>
-                      <Th align="right" className="w-[90px]">Target</Th>
-                      <Th align="right" className="w-[100px]">Diproduksi</Th>
-                      <Th align="right" className="w-[90px]">Diperiksa</Th>
+                      <Th>Item / Produk</Th>
+                      <Th align="right" className="w-[90px]">Target Qty</Th>
+                      <Th align="right" className="w-[100px]">Produced Qty</Th>
+                      <Th align="right" className="w-[90px]">Inspected</Th>
                       <Th align="right" className="w-[90px]">Sisa QC</Th>
                       <Th align="right" className="w-[90px]">Rework</Th>
-                      <Th align="right" className="w-[120px]">Aksi</Th>
+                      <Th align="right" className="w-[160px]">Aksi</Th>
                     </Tr>
                   </TableHead>
                   <TableBody>
@@ -543,7 +543,7 @@ export default function QualityPage() {
           <CardHeader title="Form Input Inspeksi QC" description="Catat disposisi hasil inspeksi kuantitas produksi." />
           <CardBody className="space-y-4">
             <form className="space-y-4" onSubmit={handleCreateInspection}>
-              <Field label="Nomor pemeriksaan" required hint="Kosongkan untuk nomor otomatis.">
+              <Field label="Nomor Inspeksi QC" required hint="Kosongkan untuk penomoran otomatis.">
                 <Input name="number" placeholder={suggestInspectionNumber()} value={formNumber} onChange={(e) => setFormNumber(e.target.value)} />
               </Field>
               <Field label="Manufacturing Order (MO)" required>
@@ -592,7 +592,7 @@ export default function QualityPage() {
                   ) : null}
                   {inspectionMode === "REWORK" ? (
                     <p className="font-medium text-amber-800">
-                      * Mode Re-Inspeksi Rework: Unit yang diterima akan siap diambil ke stok barang jadi, unit ditolak akan dicatat sebagai scrap, dan kuantitas rework pesanan akan berkurang.
+                      * Mode Re-Inspeksi Rework: Unit yang diterima akan siap diambil ke stok Finished Goods, unit ditolak akan dicatat sebagai scrap, dan kuantitas rework MO akan berkurang.
                     </p>
                   ) : null}
                 </div>
@@ -608,21 +608,21 @@ export default function QualityPage() {
                 </Field>
               ) : null}
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Kuantitas diperiksa" required>
+                <Field label="Quantity Inspected" required>
                   <Input name="inspectedQty" type="number" min="0.000001" step="0.000001" required value={formInspected} onChange={(e) => setFormInspected(e.target.value)} />
                 </Field>
-                <Field label="Kuantitas terima" required>
+                <Field label="Quantity Accepted" required>
                   <Input name="acceptedQty" type="number" min="0" step="0.000001" required value={formAccepted} onChange={(e) => setFormAccepted(e.target.value)} />
                 </Field>
-                <Field label="Kuantitas tolak" required>
+                <Field label="Quantity Rejected (Scrap)" required>
                   <Input name="rejectedQty" type="number" min="0" step="0.000001" required value={formRejected} onChange={(e) => setFormRejected(e.target.value)} />
                 </Field>
-                <Field label="Kuantitas rework" required>
+                <Field label="Quantity Rework" required>
                   <Input name="reworkQty" type="number" min="0" step="0.000001" required value={formRework} onChange={(e) => setFormRework(e.target.value)} />
                 </Field>
               </div>
               <p className="text-[12px] text-slate-500">
-                Diperiksa harus sama dengan Diterima + Ditolak + Rework.
+                Inspected harus sama dengan Accepted + Rejected + Rework.
               </p>
               <Field label="Kode cacat (opsional)">
                 <Input name="defectCode" placeholder="contoh: PANEL-CRACK-01" value={formDefect} onChange={(e) => setFormDefect(e.target.value)} />
@@ -641,7 +641,7 @@ export default function QualityPage() {
       <Card>
         <CardHeader
           title="Riwayat Inspeksi Quality Control"
-          description={`${filteredInspections.length} pemeriksaan ditampilkan.`}
+          description={`${filteredInspections.length} hasil inspeksi tercatat.`}
           actions={
             <div className="flex flex-wrap items-center gap-2">
               <div className="w-56">
@@ -678,10 +678,10 @@ export default function QualityPage() {
         />
         <CardBody className="p-0">
           {loading ? (
-            <div className="p-8 text-center text-slate-500">Memuat riwayat pemeriksaan…</div>
+            <div className="p-8 text-center text-slate-500">Memuat riwayat inspeksi QC…</div>
           ) : filteredInspections.length === 0 ? (
             <EmptyState
-              title="Belum ada riwayat pemeriksaan"
+              title="Belum ada riwayat inspeksi QC"
               description={
                 inspectionSearch || inspectionStatusFilter
                   ? "Tidak ada riwayat inspeksi cocok dengan filter."
@@ -696,12 +696,12 @@ export default function QualityPage() {
                     <Th className="w-[140px]">Nomor QC</Th>
                     <Th className="w-[140px]">Nomor MO</Th>
                     <Th className="w-[100px]">Status</Th>
-                    <Th align="right" className="w-[90px]">Diperiksa</Th>
-                    <Th align="right" className="w-[90px]">Diterima</Th>
-                    <Th align="right" className="w-[90px]">Ditolak</Th>
+                    <Th align="right" className="w-[90px]">Inspected</Th>
+                    <Th align="right" className="w-[90px]">Accepted</Th>
+                    <Th align="right" className="w-[90px]">Rejected</Th>
                     <Th align="right" className="w-[90px]">Rework</Th>
                     <Th align="right" className="w-[150px]">Waktu Diperiksa</Th>
-                    <Th align="right" className="w-[110px]">Aksi</Th>
+                    <Th align="right" className="w-[150px]">Aksi</Th>
                   </Tr>
                 </TableHead>
                 <TableBody>

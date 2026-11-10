@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "./button";
 
@@ -22,6 +23,8 @@ export function Pagination({
   pageSizeOptions = [10, 25, 50, 100],
   className = "",
 }: PaginationProps) {
+  const pageSizeId = useId();
+
   if (totalItems <= 0) return null;
 
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
@@ -41,11 +44,11 @@ export function Pagination({
         </span>
         {onPageSizeChange ? (
           <div className="ml-3 flex items-center gap-1.5">
-            <label htmlFor="pagination-page-size" className="text-slate-500">
+            <label htmlFor={pageSizeId} className="text-slate-500">
               Per hal:
             </label>
             <select
-              id="pagination-page-size"
+              id={pageSizeId}
               aria-label="Pilih jumlah baris per halaman"
               value={pageSize}
               onChange={(e) => {

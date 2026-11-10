@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,24 @@ export function CreateUomModal() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") handleClose();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const original = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = original;
+    };
+  }, [open]);
 
   function handleClose() {
     setOpen(false);
@@ -73,19 +91,19 @@ export function CreateUomModal() {
         type="button"
         variant="primary"
       >
-        <Plus aria-hidden className="size-4 mr-2" />
+        <Plus aria-hidden className="size-4" />
         Tambah satuan
       </Button>
 
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
           <div
             aria-hidden="true"
             className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
             onClick={handleClose}
           />
-          <div className="relative z-10 w-full max-w-lg">
-            <Card className="shadow-2xl">
+          <div className="relative z-10 w-full max-w-lg my-auto">
+            <Card className="shadow-2xl max-h-[90vh] flex flex-col">
               <CardHeader
                 actions={
                   <button
@@ -97,10 +115,10 @@ export function CreateUomModal() {
                     <X aria-hidden className="size-4" />
                   </button>
                 }
-                description="Satuan ukuran (UOM) mendefinisikan unit kuantitas barang, BOM, dan konversi."
+                description="Satuan ukuran (UOM) mendefinisikan unit kuantitas Item Master, BOM, dan konversi."
                 title="Tambah Satuan Ukuran Baru"
               />
-              <CardBody className="space-y-4">
+              <CardBody className="space-y-4 overflow-y-auto">
                 {error ? <Alert tone="danger" onClose={() => setError(null)}>{error}</Alert> : null}
                 {notice ? <Alert tone="success" onClose={() => setNotice(null)}>{notice}</Alert> : null}
                 <form className="space-y-3" onSubmit={handleSubmit}>
@@ -158,7 +176,7 @@ export function CreateUomModal() {
                       Batal
                     </Button>
                     <Button disabled={submitting || !code.trim() || !name.trim()} loading={submitting} type="submit" variant="primary">
-                      <Plus aria-hidden className="size-4 mr-2" />
+                      <Plus aria-hidden className="size-4" />
                       Simpan satuan
                     </Button>
                   </div>

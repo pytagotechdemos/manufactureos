@@ -23,7 +23,7 @@ export default async function ProtectedLayout({ children }: Readonly<{ children:
         roleNames: roleLinks.map(({ role }) => role.name),
       }}
     >
-      <div id="main-content">{children}</div>
+      {children}
     </AppShell>
   );
 }

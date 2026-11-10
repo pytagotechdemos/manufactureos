@@ -211,7 +211,7 @@ export default function ProcurementPage() {
       for (let index = 0; index < orderOffsets.length; index += 10) {
         const pages = await Promise.all(orderOffsets.slice(index, index + 10).map(async (offset) => {
           const response = await fetch(`/api/v1/procurement/purchase-orders?limit=100&offset=${offset}`);
-          if (!response.ok) throw new Error("Gagal memuat seluruh pesanan pembelian");
+          if (!response.ok) throw new Error("Gagal memuat seluruh Purchase Order (PO)");
           return response.json();
         }));
         allOrders.push(...pages.flatMap((page) => page.data ?? []));
@@ -237,7 +237,7 @@ export default function ProcurementPage() {
       for (let index = 0; index < receiptOffsets.length; index += 10) {
         const pages = await Promise.all(receiptOffsets.slice(index, index + 10).map(async (offset) => {
           const response = await fetch(`/api/v1/procurement/goods-receipts?limit=100&offset=${offset}`);
-          if (!response.ok) throw new Error("Gagal memuat seluruh penerimaan barang");
+          if (!response.ok) throw new Error("Gagal memuat seluruh Goods Receipt (GRN)");
           return response.json();
         }));
         allReceipts.push(...pages.flatMap((page) => page.data ?? []));
@@ -256,13 +256,13 @@ export default function ProcurementPage() {
       for (let index = 0; index < lineOffsets.length; index += 10) {
         linePages.push(...await Promise.all(lineOffsets.slice(index, index + 10).map(async (offset) => {
           const response = await fetch(`/api/v1/purchase-order-lines?limit=100&offset=${offset}`);
-          if (!response.ok) throw new Error("Gagal memuat seluruh baris pesanan pembelian");
+          if (!response.ok) throw new Error("Gagal memuat seluruh baris PO");
           return response.json();
         })));
       }
       setPoLines([...(lineJson.data ?? []), ...linePages.flatMap((page) => page.data ?? [])]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memuat data pembelian");
+      setError(err instanceof Error ? err.message : "Gagal memuat data procurement");
     } finally {
       setLoading(false);
     }
@@ -336,7 +336,7 @@ export default function ProcurementPage() {
 
   function exportPoCsv() {
     downloadCsv(
-      `pesanan-pembelian-${todayJakarta()}.csv`,
+      `purchase-orders-${todayJakarta()}.csv`,
       ["Nomor PO", "Kode Supplier", "Nama Supplier", "Status", "Jumlah Baris", "Total Nilai", "Estimasi Pengiriman", "Waktu Dibuat"],
       filteredOrders.map((order) => [
         order.number,
@@ -353,8 +353,8 @@ export default function ProcurementPage() {
 
   function exportPrCsv() {
     downloadCsv(
-      `permintaan-pembelian-${todayJakarta()}.csv`,
-      ["Nomor PR", "Kode Supplier", "Nama Supplier", "Status", "SKU Barang", "Nama Barang", "Kuantitas", "Satuan", "Dibutuhkan", "Waktu Dibuat"],
+      `purchase-requests-${todayJakarta()}.csv`,
+      ["Nomor PR", "Kode Supplier", "Nama Supplier", "Status", "SKU Item", "Nama Item", "Quantity", "UOM", "Needed By", "Waktu Dibuat"],
       filteredRequests.flatMap((req) =>
         req.lines.map((l) => [
           req.number,
@@ -374,8 +374,8 @@ export default function ProcurementPage() {
 
   function exportGrCsv() {
     downloadCsv(
-      `penerimaan-barang-${todayJakarta()}.csv`,
-      ["Nomor GR", "Nomor PO", "Kode Supplier", "Status", "Waktu Diposting", "Waktu Dibuat"],
+      `goods-receipts-${todayJakarta()}.csv`,
+      ["Nomor GRN", "Nomor PO", "Kode Supplier", "Status", "Waktu Diposting", "Waktu Dibuat"],
       goodsReceipts.map((gr) => [
         gr.number,
         (gr.order ?? gr.purchaseOrder)?.number ?? "",
@@ -481,11 +481,11 @@ export default function ProcurementPage() {
         body: JSON.stringify(body),
       });
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal membuat pesanan pembelian");
+      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal membuat Purchase Order (PO)");
       setNotice(
         poAllocatedPrLine
-          ? `Pesanan pembelian ${body.number} dibuat dan dialokasikan dari ${poAllocatedPrLine.prNumber}. Setujui untuk mengizinkan penerimaan.`
-          : "Pesanan pembelian dibuat sebagai draf. Setujui untuk mengizinkan penerimaan.",
+          ? `Purchase Order ${body.number} berhasil dibuat dan dialokasikan dari PR ${poAllocatedPrLine.prNumber}. Setujui (Approve) untuk memproses penerimaan.`
+          : "Purchase Order (PO) berhasil dibuat sebagai draf. Setujui (Approve) untuk memproses penerimaan.",
       );
       formElement.reset();
       setPoItemId("");
@@ -495,7 +495,7 @@ export default function ProcurementPage() {
       setPoAllocatedPrLine(null);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal membuat pesanan pembelian");
+      setError(err instanceof Error ? err.message : "Gagal membuat Purchase Order (PO)");
     } finally {
       setSaving(false);
     }
@@ -533,15 +533,15 @@ export default function ProcurementPage() {
         body: JSON.stringify(body),
       });
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal membuat permintaan pembelian");
-      setNotice(`Permintaan pembelian ${body.number} berhasil dibuat sebagai draf. Setujui untuk mengizinkan konversi ke PO.`);
+      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal membuat Purchase Request (PR)");
+      setNotice(`Purchase Request ${body.number} berhasil dibuat sebagai draf. Setujui (Approve) untuk mengizinkan konversi ke PO.`);
       formElement.reset();
       setPrItemId("");
       setPrUomId("");
       setPrSupplierId("");
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal membuat permintaan pembelian");
+      setError(err instanceof Error ? err.message : "Gagal membuat Purchase Request (PR)");
     } finally {
       setSaving(false);
     }
@@ -573,8 +573,8 @@ export default function ProcurementPage() {
         body: JSON.stringify(body),
       });
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal mencatat penerimaan barang");
-      setNotice("Penerimaan barang dicatat sebagai draf. Posting untuk menambah stok.");
+      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal mencatat Goods Receipt (GRN)");
+      setNotice("Goods Receipt (GRN) dicatat sebagai draf. Posting untuk menambah saldo stok gudang.");
       formElement.reset();
       setGrPurchaseOrderId("");
       setGrWarehouseId("");
@@ -582,7 +582,7 @@ export default function ProcurementPage() {
       setGrQuantity("");
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal mencatat penerimaan barang");
+      setError(err instanceof Error ? err.message : "Gagal mencatat Goods Receipt (GRN)");
     } finally {
       setSaving(false);
     }
@@ -594,7 +594,7 @@ export default function ProcurementPage() {
     try {
       const res = await fetch(`/api/v1/procurement/purchase-orders/${order.id}/approve`, { method: "POST" });
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal menyetujui pesanan pembelian");
+      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal menyetujui Purchase Order (PO)");
       setNotice(
         <span>
           {order.number} disetujui.{" "}
@@ -606,13 +606,13 @@ export default function ProcurementPage() {
               setGrPurchaseOrderId(order.id);
             }}
           >
-            Catat Penerimaan Barang (GR) &rarr;
+            Catat Goods Receipt (GRN) &rarr;
           </button>
         </span>
       );
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal menyetujui pesanan pembelian");
+      setError(err instanceof Error ? err.message : "Gagal menyetujui Purchase Order (PO)");
     } finally {
       setActingId(null);
     }
@@ -624,7 +624,7 @@ export default function ProcurementPage() {
     try {
       const res = await fetch(`/api/v1/procurement/purchase-requests/${req.id}/approve`, { method: "POST" });
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal menyetujui permintaan pembelian");
+      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal menyetujui Purchase Request (PR)");
       setNotice(
         <span>
           {req.number} disetujui dan siap dialokasikan ke PO.{" "}
@@ -633,13 +633,13 @@ export default function ProcurementPage() {
             className="ml-1 font-semibold underline underline-offset-2 hover:text-emerald-950"
             onClick={() => setActiveTab("orders")}
           >
-            Buka Form Pesanan Pembelian &rarr;
+            Buka Form Purchase Order (PO) &rarr;
           </button>
         </span>
       );
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal menyetujui permintaan pembelian");
+      setError(err instanceof Error ? err.message : "Gagal menyetujui Purchase Request (PR)");
     } finally {
       setActingId(null);
     }
@@ -651,7 +651,7 @@ export default function ProcurementPage() {
     try {
       const res = await fetch(`/api/v1/procurement/goods-receipts/${receipt.id}/post`, { method: "POST" });
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal memposting penerimaan barang");
+      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal memposting Goods Receipt (GRN)");
       setNotice(
         <span>
           {receipt.number} diposting ke stok gudang.{" "}
@@ -659,81 +659,81 @@ export default function ProcurementPage() {
             href="/inventory"
             className="ml-1 font-semibold underline underline-offset-2 hover:text-emerald-950"
           >
-            Lihat di Persediaan &rarr;
+            Lihat di Inventory & Stock &rarr;
           </Link>
         </span>
       );
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memposting penerimaan barang");
+      setError(err instanceof Error ? err.message : "Gagal memposting Goods Receipt (GRN)");
     } finally {
       setActingId(null);
     }
   }
 
   async function handleCancelPO(order: PurchaseOrder) {
-    if (!window.confirm(`Batalkan pesanan pembelian ${order.number}? Alokasi dari PR akan dikembalikan.`)) return;
+    if (!window.confirm(`Batalkan Purchase Order ${order.number}? Alokasi dari PR akan dikembalikan.`)) return;
     setActingId(order.id);
     setError(null);
     try {
       const res = await fetch(`/api/v1/procurement/purchase-orders/${order.id}/cancel`, { method: "POST" });
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal membatalkan pesanan pembelian");
-      setNotice(`Pesanan pembelian ${order.number} dibatalkan.`);
+      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal membatalkan Purchase Order (PO)");
+      setNotice(`Purchase Order ${order.number} dibatalkan.`);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal membatalkan pesanan pembelian");
+      setError(err instanceof Error ? err.message : "Gagal membatalkan Purchase Order (PO)");
     } finally {
       setActingId(null);
     }
   }
 
   async function handleClosePO(order: PurchaseOrder) {
-    if (!window.confirm(`Tutup pesanan pembelian ${order.number}? Penerimaan barang tidak dapat dilakukan lagi untuk PO ini.`)) return;
+    if (!window.confirm(`Tutup Purchase Order ${order.number}? Goods Receipt tidak dapat diproses lagi untuk PO ini.`)) return;
     setActingId(order.id);
     setError(null);
     try {
       const res = await fetch(`/api/v1/procurement/purchase-orders/${order.id}/close`, { method: "POST" });
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal menutup pesanan pembelian");
-      setNotice(`Pesanan pembelian ${order.number} ditutup.`);
+      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal menutup Purchase Order (PO)");
+      setNotice(`Purchase Order ${order.number} ditutup.`);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal menutup pesanan pembelian");
+      setError(err instanceof Error ? err.message : "Gagal menutup Purchase Order (PO)");
     } finally {
       setActingId(null);
     }
   }
 
   async function handleCancelPR(req: PurchaseRequest) {
-    if (!window.confirm(`Batalkan permintaan pembelian ${req.number}?`)) return;
+    if (!window.confirm(`Batalkan Purchase Request ${req.number}?`)) return;
     setActingId(req.id);
     setError(null);
     try {
       const res = await fetch(`/api/v1/procurement/purchase-requests/${req.id}/cancel`, { method: "POST" });
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal membatalkan permintaan pembelian");
-      setNotice(`Permintaan pembelian ${req.number} dibatalkan.`);
+      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal membatalkan Purchase Request (PR)");
+      setNotice(`Purchase Request ${req.number} dibatalkan.`);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal membatalkan permintaan pembelian");
+      setError(err instanceof Error ? err.message : "Gagal membatalkan Purchase Request (PR)");
     } finally {
       setActingId(null);
     }
   }
 
   async function handleCancelReceipt(receipt: GoodsReceipt) {
-    if (!window.confirm(`Batalkan draf penerimaan ${receipt.number}?`)) return;
+    if (!window.confirm(`Batalkan draf Goods Receipt ${receipt.number}?`)) return;
     setActingId(receipt.id);
     setError(null);
     try {
       const res = await fetch(`/api/v1/procurement/goods-receipts/${receipt.id}/cancel`, { method: "POST" });
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal membatalkan penerimaan barang");
-      setNotice(`Draf penerimaan ${receipt.number} dibatalkan.`);
+      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal membatalkan Goods Receipt");
+      setNotice(`Draf Goods Receipt ${receipt.number} dibatalkan.`);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal membatalkan penerimaan barang");
+      setError(err instanceof Error ? err.message : "Gagal membatalkan Goods Receipt");
     } finally {
       setActingId(null);
     }
@@ -756,11 +756,11 @@ export default function ProcurementPage() {
       {notice ? <Alert tone="success" onClose={() => setNotice(null)}>{notice}</Alert> : null}
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-200 space-x-6">
+      <div className="flex border-b border-slate-200 space-x-6 overflow-x-auto scroll-area">
         <button
           type="button"
           onClick={() => setActiveTab("orders")}
-          className={`flex items-center gap-2 pb-3 text-sm font-semibold transition-colors border-b-2 -mb-px ${
+          className={`flex items-center gap-2 pb-3 text-sm font-semibold transition-colors border-b-2 -mb-px shrink-0 whitespace-nowrap ${
             activeTab === "orders"
               ? "border-brand-600 text-brand-600"
               : "border-transparent text-slate-500 hover:text-slate-800"
@@ -772,7 +772,7 @@ export default function ProcurementPage() {
         <button
           type="button"
           onClick={() => setActiveTab("requests")}
-          className={`flex items-center gap-2 pb-3 text-sm font-semibold transition-colors border-b-2 -mb-px ${
+          className={`flex items-center gap-2 pb-3 text-sm font-semibold transition-colors border-b-2 -mb-px shrink-0 whitespace-nowrap ${
             activeTab === "requests"
               ? "border-brand-600 text-brand-600"
               : "border-transparent text-slate-500 hover:text-slate-800"
@@ -784,7 +784,7 @@ export default function ProcurementPage() {
         <button
           type="button"
           onClick={() => setActiveTab("receipts")}
-          className={`flex items-center gap-2 pb-3 text-sm font-semibold transition-colors border-b-2 -mb-px ${
+          className={`flex items-center gap-2 pb-3 text-sm font-semibold transition-colors border-b-2 -mb-px shrink-0 whitespace-nowrap ${
             activeTab === "receipts"
               ? "border-brand-600 text-brand-600"
               : "border-transparent text-slate-500 hover:text-slate-800"
@@ -800,8 +800,8 @@ export default function ProcurementPage() {
         <div className="space-y-5">
           <Card>
             <CardHeader
-              title="Daftar pesanan pembelian (PO)"
-              description={`${filteredOrders.length} dari ${purchaseOrders.length} pesanan.`}
+              title="Daftar Purchase Orders (PO)"
+              description={`${filteredOrders.length} dari ${purchaseOrders.length} Purchase Order.`}
               actions={
                 <div className="flex items-center gap-2">
                   <SearchInput value={search} onChange={setSearch} placeholder="Cari nomor atau supplier…" />
@@ -820,22 +820,22 @@ export default function ProcurementPage() {
             />
             <CardBody className="p-0">
               {loading ? (
-                <div className="p-8 text-center text-slate-500">Memuat pesanan pembelian…</div>
+                <div className="p-8 text-center text-slate-500">Memuat Purchase Orders (PO)…</div>
               ) : filteredOrders.length === 0 ? (
-                <EmptyState title="Belum ada pesanan pembelian" description="Buat pesanan pembelian baru di formulir di bawah." />
+                <EmptyState title="Belum ada Purchase Order (PO)" description="Buat Purchase Order (PO) baru pada formulir di bawah." />
               ) : (
                 <>
                   <Table>
                     <TableHead>
                       <Tr>
-                        <Th>Nomor PO</Th>
+                        <Th className="w-[140px]">Nomor PO</Th>
                         <Th>Supplier</Th>
-                        <Th>Status</Th>
-                        <Th align="right">Baris</Th>
-                        <Th align="right">Total</Th>
-                        <Th align="right">Diharapkan</Th>
-                        <Th align="right">Penerimaan</Th>
-                        <Th align="right">Aksi</Th>
+                        <Th className="w-[110px]">Status</Th>
+                        <Th align="right" className="w-[70px]">Baris</Th>
+                        <Th align="right" className="w-[120px]">Total Nilai</Th>
+                        <Th align="right" className="w-[120px]">Diharapkan</Th>
+                        <Th align="right" className="w-[80px]">GRN</Th>
+                        <Th align="right" className="w-[150px]">Aksi</Th>
                       </Tr>
                     </TableHead>
                     <TableBody>
@@ -942,8 +942,8 @@ export default function ProcurementPage() {
 
           <Card>
             <CardHeader
-              title="Buat pesanan pembelian (PO)"
-              description="Pesanan dibuat sebagai draf dan harus disetujui sebelum dapat diterima gudang."
+              title="Buat Purchase Order (PO)"
+              description="PO dibuat sebagai draf dan harus disetujui (Approved) sebelum dapat diterima di gudang."
             />
             <CardBody>
               {poAllocatedPrLine && (
@@ -951,7 +951,7 @@ export default function ProcurementPage() {
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="size-4 text-brand-600 shrink-0" />
                     <span>
-                      Mengalokasikan dari Permintaan: <strong>{poAllocatedPrLine.prNumber}</strong> · Item:{" "}
+                      Mengalokasikan dari PR: <strong>{poAllocatedPrLine.prNumber}</strong> · Item:{" "}
                       <strong>{poAllocatedPrLine.itemSku}</strong> (Sisa belum dipesan: {formatQuantity(poAllocatedPrLine.remainingQty)}{" "}
                       {poAllocatedPrLine.uomCode})
                     </span>
@@ -963,7 +963,7 @@ export default function ProcurementPage() {
                     onClick={() => setPoAllocatedPrLine(null)}
                     className="text-slate-600 hover:text-red-600"
                   >
-                    <X className="size-4 mr-1" /> Batal alokasi
+                    <X aria-hidden className="size-4" /> Batal alokasi
                   </Button>
                 </div>
               )}
@@ -987,7 +987,7 @@ export default function ProcurementPage() {
                       ))}
                     </Select>
                   </Field>
-                  <Field label="Gudang tujuan" required>
+                  <Field label="Warehouse Tujuan" required>
                     <Select
                       name="warehouseId"
                       required
@@ -1002,15 +1002,15 @@ export default function ProcurementPage() {
                       ))}
                     </Select>
                   </Field>
-                  <Field label="Pengiriman diharapkan">
+                  <Field label="Target Pengiriman">
                     <Input name="expectedDelivery" type="date" />
                   </Field>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 pt-2 border-t border-slate-100">
-                  <Field label="Barang" required>
+                  <Field label="Item" required>
                     <Select name="itemId" required value={poItemId} onChange={(e) => handleSelectPoItem(e.target.value)}>
-                      <option value="">Pilih barang</option>
+                      <option value="">Pilih item</option>
                       {items.map((item) => (
                         <option key={item.id} value={item.id}>
                           {item.sku} — {item.name}
@@ -1019,12 +1019,12 @@ export default function ProcurementPage() {
                     </Select>
                   </Field>
                   <Field
-                    label="Satuan"
+                    label="UOM"
                     required
                     hint={poItemId ? `Satuan dasar: ${items.find((it) => it.id === poItemId)?.baseUom?.code ?? "—"}` : undefined}
                   >
                     <Select name="uomId" required value={poUomId} onChange={(e) => setPoUomId(e.target.value)}>
-                      <option value="">Pilih satuan</option>
+                      <option value="">Pilih UOM</option>
                       {uoms.map((uom) => (
                         <option key={uom.id} value={uom.id}>
                           {uom.code} — {uom.name}
@@ -1032,7 +1032,7 @@ export default function ProcurementPage() {
                       ))}
                     </Select>
                   </Field>
-                  <Field label="Kuantitas" required>
+                  <Field label="Quantity" required>
                     <Input
                       name="quantity"
                       type="number"
@@ -1043,7 +1043,7 @@ export default function ProcurementPage() {
                       onChange={(e) => setPoQuantity(e.target.value)}
                     />
                   </Field>
-                  <Field label="Biaya satuan (IDR)" required>
+                  <Field label="Unit Cost (IDR)" required>
                     <Input
                       name="unitCost"
                       type="number"
@@ -1059,7 +1059,7 @@ export default function ProcurementPage() {
 
                 <div className="flex items-center gap-3 pt-2">
                   <Button type="submit" variant="primary" loading={saving}>
-                    {saving ? "Menyimpan…" : "Buat pesanan pembelian"}
+                    {saving ? "Menyimpan…" : "Buat Purchase Order (PO)"}
                   </Button>
                 </div>
               </form>
@@ -1073,8 +1073,8 @@ export default function ProcurementPage() {
         <div className="space-y-5">
           <Card>
             <CardHeader
-              title="Daftar permintaan pembelian (PR)"
-              description={`${filteredRequests.length} dari ${purchaseRequests.length} permintaan pembelian.`}
+              title="Daftar Purchase Requests (PR)"
+              description={`${filteredRequests.length} dari ${purchaseRequests.length} Purchase Request.`}
               actions={
                 <div className="flex items-center gap-2">
                   <SearchInput value={requestSearch} onChange={setRequestSearch} placeholder="Cari nomor, supplier, atau SKU…" />
@@ -1093,9 +1093,9 @@ export default function ProcurementPage() {
             />
             <CardBody className="p-0">
               {loading ? (
-                <div className="p-8 text-center text-slate-500">Memuat permintaan pembelian…</div>
+                <div className="p-8 text-center text-slate-500">Memuat Purchase Requests (PR)…</div>
               ) : filteredRequests.length === 0 ? (
-                <EmptyState title="Belum ada permintaan pembelian" description="Buat permintaan pembelian baru di panel sebelah bawah." />
+                <EmptyState title="Belum ada Purchase Request (PR)" description="Buat Purchase Request (PR) baru pada formulir di bawah." />
               ) : (
                 <>
                   <div className="divide-y divide-slate-100">
@@ -1174,11 +1174,11 @@ export default function ProcurementPage() {
                             <table className="min-w-full text-xs">
                               <thead>
                                 <tr className="border-b border-slate-200 text-slate-500">
-                                  <th className="py-2 text-left font-medium">Barang</th>
-                                  <th className="py-2 text-right font-medium">Kuantitas</th>
-                                  <th className="py-2 text-right font-medium">Teralokasi ke PO</th>
-                                  <th className="py-2 text-right font-medium">Sisa Kebutuhan</th>
-                                  <th className="py-2 text-left font-medium pl-4">Dibutuhkan</th>
+                                  <th className="py-2 text-left font-medium">Item</th>
+                                  <th className="py-2 text-right font-medium">Quantity</th>
+                                  <th className="py-2 text-right font-medium">Allocated to PO</th>
+                                  <th className="py-2 text-right font-medium">Remaining Qty</th>
+                                  <th className="py-2 text-left font-medium pl-4">Needed By</th>
                                   <th className="py-2 text-left font-medium">Catatan</th>
                                   <th className="py-2 text-right font-medium">Aksi</th>
                                 </tr>
@@ -1257,8 +1257,8 @@ export default function ProcurementPage() {
 
           <Card>
             <CardHeader
-              title="Buat permintaan pembelian (PR)"
-              description="Buat permintaan pengadaan bahan atau komponen. Setelah disetujui, PR dapat dialokasikan langsung ke pesanan pembelian (PO)."
+              title="Buat Purchase Request (PR)"
+              description="Buat permintaan pengadaan item. Setelah disetujui, PR dapat dialokasikan langsung ke Purchase Order (PO)."
             />
             <CardBody>
               <form className="space-y-4" onSubmit={handleCreatePR}>
@@ -1266,7 +1266,7 @@ export default function ProcurementPage() {
                   <Field label="Nomor PR" required hint="Kosongkan untuk penomoran otomatis PR-YYYYMMDD-XXXX.">
                     <Input name="number" placeholder={suggestPrNumber()} />
                   </Field>
-                  <Field label="Supplier preferensi" hint="Opsional. Dapat dikosongkan jika belum ditentukan.">
+                  <Field label="Preferred Supplier" hint="Opsional. Dapat dikosongkan jika belum ditentukan.">
                     <Select
                       name="supplierId"
                       value={prSupplierId}
@@ -1280,15 +1280,15 @@ export default function ProcurementPage() {
                       ))}
                     </Select>
                   </Field>
-                  <Field label="Tanggal dibutuhkan (Needed By)">
+                  <Field label="Needed By (Target Tanggal)">
                     <Input name="neededBy" type="date" />
                   </Field>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 pt-2 border-t border-slate-100">
-                  <Field label="Barang yang diminta" required>
+                  <Field label="Item yang Diminta" required>
                     <Select name="itemId" required value={prItemId} onChange={(e) => handleSelectPrItem(e.target.value)}>
-                      <option value="">Pilih barang</option>
+                      <option value="">Pilih item</option>
                       {items.map((item) => (
                         <option key={item.id} value={item.id}>
                           {item.sku} — {item.name}
@@ -1297,12 +1297,12 @@ export default function ProcurementPage() {
                     </Select>
                   </Field>
                   <Field
-                    label="Satuan (UOM)"
+                    label="UOM (Satuan)"
                     required
                     hint={prItemId ? `Satuan dasar: ${items.find((it) => it.id === prItemId)?.baseUom?.code ?? "—"}` : undefined}
                   >
                     <Select name="uomId" required value={prUomId} onChange={(e) => setPrUomId(e.target.value)}>
-                      <option value="">Pilih satuan</option>
+                      <option value="">Pilih UOM</option>
                       {uoms.map((uom) => (
                         <option key={uom.id} value={uom.id}>
                           {uom.code} — {uom.name}
@@ -1310,17 +1310,17 @@ export default function ProcurementPage() {
                       ))}
                     </Select>
                   </Field>
-                  <Field label="Kuantitas" required>
+                  <Field label="Quantity" required>
                     <Input name="quantity" type="number" min="0.000001" step="0.000001" required placeholder="0.00" />
                   </Field>
-                  <Field label="Catatan / Keperluan" hint="Alasan permintaan atau instruksi khusus">
+                  <Field label="Notes / Keterangan" hint="Alasan permintaan atau instruksi khusus">
                     <Input name="notes" placeholder="e.g. Tambahan stok produksi batch 4" />
                   </Field>
                 </div>
 
                 <div className="flex items-center gap-3 pt-2">
                   <Button type="submit" variant="primary" loading={saving}>
-                    {saving ? "Menyimpan…" : "Buat permintaan pembelian"}
+                    {saving ? "Menyimpan…" : "Buat Purchase Request (PR)"}
                   </Button>
                 </div>
               </form>
@@ -1334,23 +1334,23 @@ export default function ProcurementPage() {
         <div className="space-y-5">
           <Card>
             <CardHeader
-              title="Catat penerimaan barang (GR)"
-              description="Pilih PO yang telah disetujui, pilih baris barang yang diterima, lalu catat draf penerimaan."
+              title="Catat Goods Receipt (GRN)"
+              description="Pilih PO yang telah disetujui, tentukan baris item yang diterima, lalu catat draf Goods Receipt."
             />
             <CardBody>
               <form className="space-y-4" onSubmit={handleCreateReceipt}>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  <Field label="Nomor penerimaan" required hint="Kosongkan untuk penomoran otomatis.">
+                  <Field label="Nomor GRN" required hint="Kosongkan untuk penomoran otomatis.">
                     <Input name="number" placeholder={suggestGrNumber()} />
                   </Field>
-                  <Field label="Pesanan pembelian (PO)" required>
+                  <Field label="Purchase Order (PO)" required>
                     <Select
                       name="purchaseOrderId"
                       required
                       value={grPurchaseOrderId}
                       onChange={(event) => handleSelectGrPo(event.target.value)}
                     >
-                      <option value="">Pilih pesanan pembelian</option>
+                      <option value="">Pilih Purchase Order (PO)</option>
                       {purchaseOrders
                         .filter((order) => ["APPROVED", "PARTIALLY_RECEIVED"].includes(order.status))
                         .map((order) => (
@@ -1361,7 +1361,7 @@ export default function ProcurementPage() {
                     </Select>
                   </Field>
                   <Field
-                    label="Gudang penerimaan"
+                    label="Warehouse Penerimaan"
                     required
                     hint={grWarehouseId ? "Otomatis diselaraskan dengan gudang tujuan PO." : undefined}
                   >
@@ -1383,14 +1383,14 @@ export default function ProcurementPage() {
 
                 <div className="grid gap-4 sm:grid-cols-2 pt-2 border-t border-slate-100">
                   <Field
-                    label="Baris PO"
+                    label="Baris PO (PO Line)"
                     required
                     hint={
                       grPurchaseOrderId
                         ? grLines.length === 0
                           ? "Semua baris PO ini sudah diterima penuh."
                           : `${grLines.length} baris belum terpenuhi.`
-                        : "Pilih pesanan pembelian terlebih dahulu."
+                        : "Pilih Purchase Order (PO) terlebih dahulu."
                     }
                   >
                     <Select
@@ -1410,7 +1410,7 @@ export default function ProcurementPage() {
                     </Select>
                   </Field>
                   <Field
-                    label="Kuantitas terima"
+                    label="Received Quantity"
                     required
                     hint={selectedGrLineRemaining ? `Maksimal dapat diterima: ${formatQuantity(selectedGrLineRemaining)}.` : undefined}
                   >
@@ -1429,7 +1429,7 @@ export default function ProcurementPage() {
 
                 <div className="flex items-center gap-3 pt-2">
                   <Button type="submit" variant="primary" loading={saving} disabled={grLines.length === 0}>
-                    {saving ? "Menyimpan…" : "Catat penerimaan"}
+                    {saving ? "Menyimpan…" : "Catat Goods Receipt (GRN)"}
                   </Button>
                 </div>
               </form>
@@ -1438,15 +1438,15 @@ export default function ProcurementPage() {
 
           <Card>
             <CardHeader
-              title="Daftar penerimaan barang"
-              description="Draf penerimaan harus diposting agar kuantitas stok bertambah pada kartu stok gudang."
+              title="Daftar Goods Receipts (GRN)"
+              description="Draf Goods Receipt (GRN) harus diposting agar stok fisik bertambah pada kartu inventory gudang."
               actions={
                 <Button
                   variant="secondary"
                   size="sm"
                   onClick={exportGrCsv}
                   disabled={goodsReceipts.length === 0}
-                  title="Unduh daftar penerimaan barang sebagai file CSV"
+                  title="Unduh daftar Goods Receipt sebagai file CSV"
                 >
                   <Download aria-hidden className="size-3.5" />
                   Ekspor CSV
@@ -1455,21 +1455,21 @@ export default function ProcurementPage() {
             />
             <CardBody className="p-0">
               {loading ? (
-                <div className="p-8 text-center text-slate-500">Memuat penerimaan…</div>
+                <div className="p-8 text-center text-slate-500">Memuat Goods Receipts (GRN)…</div>
               ) : goodsReceipts.length === 0 ? (
-                <EmptyState compact title="Belum ada penerimaan barang" />
+                <EmptyState compact title="Belum ada Goods Receipt (GRN)" />
               ) : (
                 <>
                   <Table>
                     <TableHead>
                       <Tr>
-                        <Th>Nomor GR</Th>
-                        <Th>Pesanan pembelian</Th>
+                        <Th className="w-[140px]">Nomor GRN</Th>
+                        <Th className="w-[140px]">Nomor PO</Th>
                         <Th>Supplier</Th>
-                        <Th>Status</Th>
-                        <Th align="right">Diposting</Th>
-                        <Th align="right">Dibuat</Th>
-                        <Th align="right">Aksi</Th>
+                        <Th className="w-[110px]">Status</Th>
+                        <Th align="right" className="w-[140px]">Waktu Diposting</Th>
+                        <Th align="right" className="w-[130px]">Waktu Dibuat</Th>
+                        <Th align="right" className="w-[150px]">Aksi</Th>
                       </Tr>
                     </TableHead>
                     <TableBody>

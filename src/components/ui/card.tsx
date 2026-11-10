@@ -23,7 +23,7 @@ export function CardHeader({
         <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
         {description ? <p className="mt-0.5 text-[13px] text-slate-500">{description}</p> : null}
       </div>
-      {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+      {actions ? <div className="flex flex-wrap items-center gap-2 max-sm:w-full max-sm:justify-start">{actions}</div> : null}
     </header>
   );
 }

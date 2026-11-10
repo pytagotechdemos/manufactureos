@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,24 @@ export function CreateCategoryModal({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") handleClose();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const original = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = original;
+    };
+  }, [open]);
 
   function handleClose() {
     setOpen(false);
@@ -73,19 +91,19 @@ export function CreateCategoryModal({
         type="button"
         variant={variant}
       >
-        <Plus aria-hidden className="size-4 mr-2" />
+        <Plus aria-hidden className="size-4" />
         {buttonLabel}
       </Button>
 
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
           <div
             aria-hidden="true"
             className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
             onClick={handleClose}
           />
-          <div className="relative z-10 w-full max-w-md">
-            <Card className="shadow-2xl">
+          <div className="relative z-10 w-full max-w-md my-auto">
+            <Card className="shadow-2xl max-h-[90vh] flex flex-col">
               <CardHeader
                 actions={
                   <button
@@ -100,7 +118,7 @@ export function CreateCategoryModal({
                 description="Kategori digunakan untuk klasifikasi master item dan struktur taksonomi produk."
                 title="Tambah Kategori Baru"
               />
-              <CardBody className="space-y-4">
+              <CardBody className="space-y-4 overflow-y-auto">
                 {error ? (
                   <Alert onClose={() => setError(null)} tone="danger">
                     {error}

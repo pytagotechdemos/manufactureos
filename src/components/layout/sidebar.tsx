@@ -39,7 +39,7 @@ export function SidebarContent({ user, onNavigate }: { user: SessionUser; onNavi
         </span>
         <span className="min-w-0">
           <span className="block truncate text-[13px] leading-4 font-semibold text-slate-900">ManufactureOS</span>
-          <span className="block text-[11px] leading-4 text-slate-500">ERP Manufaktur</span>
+          <span className="block text-[11px] leading-4 text-slate-500">Discrete Manufacturing ERP</span>
         </span>
       </div>
 

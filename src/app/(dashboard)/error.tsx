@@ -44,14 +44,15 @@ export default function DashboardError({
           ) : null}
           <div className="mt-6 flex items-center justify-center gap-3">
             <Button onClick={reset} variant="primary">
-              <RotateCcw aria-hidden className="size-4 mr-2" />
+              <RotateCcw aria-hidden className="size-4" />
               Coba Lagi
             </Button>
-            <Link href="/overview">
-              <Button variant="secondary">
-                <ArrowLeft aria-hidden className="size-4 mr-2" />
-                Kembali ke Ringkasan
-              </Button>
+            <Link
+              href="/overview"
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3.5 text-sm font-medium text-slate-700 shadow-xs transition-colors hover:bg-slate-50 hover:text-slate-900"
+            >
+              <ArrowLeft aria-hidden className="size-4" />
+              Kembali ke Overview
             </Link>
           </div>
         </CardBody>

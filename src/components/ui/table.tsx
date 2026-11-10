@@ -25,7 +25,7 @@ export function Th({ children, className = "", align = "left", ...props }: ThHTM
   return (
     <th
       scope="col"
-      className={`px-4 py-2.5 text-[11px] font-semibold tracking-wide text-slate-500 uppercase ${alignment} ${className}`}
+      className={`px-4 py-2.5 text-[11px] font-semibold tracking-wide text-slate-500 uppercase whitespace-nowrap ${alignment} ${className}`}
       {...props}
     >
       {children}

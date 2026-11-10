@@ -69,7 +69,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
   return (
     <select
       ref={ref}
-      className={`${controlClasses} h-9 appearance-none bg-[url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")] bg-[length:14px] bg-[right_0.6rem_center] bg-no-repeat pr-8 ${invalid ? "border-red-300" : ""} ${className}`}
+      className={`${controlClasses} h-9 cursor-pointer appearance-none bg-[url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")] bg-[length:14px] bg-[right_0.6rem_center] bg-no-repeat pr-8 ${invalid ? "border-red-300" : ""} ${className}`}
       {...props}
     >
       {children}

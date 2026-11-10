@@ -27,7 +27,7 @@ export type NavGroup = {
 
 export const navGroups: NavGroup[] = [
   {
-    items: [{ label: "Ringkasan", href: "/overview", icon: LayoutDashboard }],
+    items: [{ label: "Overview", href: "/overview", icon: LayoutDashboard }],
   },
   {
     label: "Engineering & Master Data",
@@ -39,7 +39,7 @@ export const navGroups: NavGroup[] = [
   {
     label: "Supply Chain & Planning",
     items: [
-      { label: "Perencanaan & MRP", href: "/planning", icon: CalendarRange },
+      { label: "Planning & MRP", href: "/planning", icon: CalendarRange },
       { label: "Procurement (PO & PR)", href: "/procurement", icon: ShoppingCart },
       { label: "Inventory & Stock", href: "/inventory", icon: Warehouse },
     ],

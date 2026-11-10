@@ -134,9 +134,9 @@ export default function ReceiptsPage() {
     if (recentReceipts.length === 0) return;
     const headers = [
       "Nomor Penerimaan",
-      "Nomor Inspeksi",
+      "Nomor Inspeksi QC",
       "Nomor MO",
-      "Kuantitas Diterima",
+      "Accepted Qty",
       "Status",
     ];
     const rows = recentReceipts.map((r) => [
@@ -146,7 +146,7 @@ export default function ReceiptsPage() {
       r.acceptedQty,
       r.status,
     ]);
-    downloadCsv(`penerimaan-produksi-${todayJakarta()}.csv`, headers, rows);
+    downloadCsv(`production-receipts-${todayJakarta()}.csv`, headers, rows);
   }
 
   const selectedInspection = receivable.find((inspection) => inspection.id === formInspectionId);
@@ -212,12 +212,12 @@ export default function ReceiptsPage() {
       if (!res.ok) throw new Error(json?.error?.message ?? "Gagal memposting penerimaan produksi");
       setNotice(
         <span>
-          Penerimaan {body.number} berhasil diposting ke stok barang jadi.{" "}
+          Penerimaan {body.number} berhasil diposting ke stok Finished Goods.{" "}
           <Link
             href="/inventory"
             className="ml-1 font-semibold underline underline-offset-2 hover:text-emerald-950"
           >
-            Lihat di Persediaan &rarr;
+            Lihat di Inventory & Stock &rarr;
           </Link>
         </span>
       );
@@ -253,8 +253,8 @@ export default function ReceiptsPage() {
       <div className="grid gap-5 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader
-            title="Siap diterima"
-            description="Inspeksi QC berstatus diposting yang masih memiliki kuantitas diterima belum masuk stok."
+            title="Antrean Penerimaan Produksi"
+            description="Inspeksi QC berstatus POSTED yang masih memiliki kuantitas diterima belum masuk stok gudang."
           />
           <CardBody className="p-0">
             {loading ? (
@@ -262,7 +262,7 @@ export default function ReceiptsPage() {
             ) : receivable.length === 0 ? (
               <EmptyState
                 title="Belum ada inspeksi siap diterima"
-                description="Posting pemeriksaan QC terlebih dahulu di halaman Kontrol kualitas."
+                description="Posting inspeksi QC terlebih dahulu pada modul Quality Control (QC)."
               />
             ) : (
               <Table>
@@ -307,7 +307,7 @@ export default function ReceiptsPage() {
         </Card>
 
         <Card>
-          <CardHeader title="Posting penerimaan" description="Kuantitas tidak boleh melebihi sisa yang diterima QC." />
+          <CardHeader title="Posting Penerimaan Produksi" description="Kuantitas tidak boleh melebihi sisa yang diterima (Accepted) dari inspeksi QC." />
           <CardBody>
             <form className="space-y-4" onSubmit={handlePostReceipt}>
               <Field label="Nomor penerimaan" required hint="Kosongkan untuk nomor otomatis.">
@@ -323,7 +323,7 @@ export default function ReceiptsPage() {
                   ))}
                 </Select>
               </Field>
-              <Field label="Gudang barang jadi" required>
+              <Field label="Gudang Finished Goods" required>
                 <Select required value={formWarehouseId} onChange={(event) => setFormWarehouseId(event.target.value)}>
                   <option value="">Pilih gudang</option>
                   {warehouses.map((warehouse) => (
@@ -334,7 +334,7 @@ export default function ReceiptsPage() {
                 </Select>
               </Field>
               <Field
-                label="Kuantitas diterima"
+                label="Kuantitas Diterima (Accepted Qty)"
                 required
                 hint={selectedInspection ? `Maksimal ${formatQuantity(remainingAccepted(selectedInspection).toString())}.` : undefined}
               >
@@ -358,7 +358,7 @@ export default function ReceiptsPage() {
 
       <Card>
         <CardHeader
-          title="Penerimaan terbaru"
+          title="Riwayat Penerimaan Produksi"
           description={`${recentReceipts.length} penerimaan produksi tercatat.`}
           actions={
             recentReceipts.length > 0 ? (
@@ -376,11 +376,11 @@ export default function ReceiptsPage() {
               <Table>
                 <TableHead>
                   <Tr>
-                    <Th>Nomor</Th>
-                    <Th>Inspeksi</Th>
-                    <Th>MO</Th>
-                    <Th align="right">Kuantitas</Th>
-                    <Th>Status</Th>
+                    <Th className="w-[150px]">Nomor Penerimaan</Th>
+                    <Th className="w-[140px]">Inspeksi QC</Th>
+                    <Th className="w-[140px]">Nomor MO</Th>
+                    <Th align="right" className="w-[120px]">Kuantitas</Th>
+                    <Th className="w-[110px]">Status</Th>
                   </Tr>
                 </TableHead>
                 <TableBody>

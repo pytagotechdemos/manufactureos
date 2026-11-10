@@ -56,7 +56,7 @@ export default function BomCreatePage() {
         fetch("/api/v1/items?limit=100&offset=0", { headers: { Accept: "application/json" } }),
         fetch("/api/v1/uoms", { headers: { Accept: "application/json" } }),
       ]);
-      if (!firstItemRes.ok || !uomRes.ok) throw new Error("Gagal memuat data master barang dan satuan");
+      if (!firstItemRes.ok || !uomRes.ok) throw new Error("Gagal memuat master Item dan satuan");
       const [itemJson, uomJson] = await Promise.all([firstItemRes.json(), uomRes.json()]);
       const itemRows = [...(itemJson.data ?? [])] as Array<{ id: string; sku: string; name: string; baseUomId: string | null }>;
       const totalItems = Number(itemJson.page?.total ?? itemRows.length);
@@ -64,7 +64,7 @@ export default function BomCreatePage() {
       for (let index = 0; index < offsets.length; index += 10) {
         const pages = await Promise.all(offsets.slice(index, index + 10).map(async (offset) => {
           const response = await fetch(`/api/v1/items?limit=100&offset=${offset}`, { headers: { Accept: "application/json" } });
-          if (!response.ok) throw new Error("Gagal memuat seluruh barang");
+          if (!response.ok) throw new Error("Gagal memuat seluruh item");
           return response.json();
         }));
         itemRows.push(...pages.flatMap((page) => page.data ?? []));
@@ -167,7 +167,7 @@ export default function BomCreatePage() {
       <PageHeader
         eyebrow="Engineering"
         title="Buat Bill of Materials (BOM)"
-        description="Susun draf Bill of Materials: output produk jadi/sub-assembly, komponen, kuantitas, UOM, dan scrap rate."
+        description="Susun draf Bill of Materials: output Finished Goods / Sub-assembly, komponen, kuantitas, UOM, dan scrap rate."
         actions={
           <Link className={linkButtonClasses} href="/engineering">
             Eksplorasi BOM
@@ -181,14 +181,14 @@ export default function BomCreatePage() {
 
       {itemsLoading ? (
         <Card>
-          <CardBody className="p-8 text-center text-slate-500">Memuat data master barang dan satuan…</CardBody>
+          <CardBody className="p-8 text-center text-slate-500">Memuat data master item dan satuan…</CardBody>
         </Card>
       ) : (
         <form className="space-y-5" onSubmit={handleCreateBom}>
           <Card>
             <CardHeader
               title="Header BOM"
-              description="Nomor dan revisi harus unik untuk setiap barang output."
+              description="Nomor dan revisi harus unik untuk setiap item output."
             />
             <CardBody>
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -218,14 +218,14 @@ export default function BomCreatePage() {
                     onChange={(event) => setEffectiveDate(event.target.value)}
                   />
                 </Field>
-                <Field label="Barang output" required>
+                <Field label="Item Output (Finished Goods / Sub-assembly)" required>
                   <Select
                     name="outputItemId"
                     required
                     value={outputItemId}
                     onChange={(event) => handleSelectOutputItem(event.target.value)}
                   >
-                    <option value="">Pilih barang output</option>
+                    <option value="">Pilih item output</option>
                     {items.map((item) => (
                       <option key={item.id} value={item.id}>
                         {item.sku} · {item.name}
@@ -250,12 +250,12 @@ export default function BomCreatePage() {
 
           <Card>
             <CardHeader
-              title="Baris komponen"
-              description="Pilih komponen, kuantitas pemakaian, satuan, dan perkiraan scrap."
+              title="Komponen & Bahan (BOM Lines)"
+              description="Pilih komponen material, kuantitas pemakaian, satuan, dan perkiraan scrap rate."
               actions={
                 <Button type="button" variant="secondary" size="sm" onClick={addLine}>
                   <Plus aria-hidden className="size-4" />
-                  Tambah baris
+                  Tambah komponen
                 </Button>
               }
             />
@@ -268,7 +268,7 @@ export default function BomCreatePage() {
                   action={
                     <Button type="button" variant="secondary" size="sm" onClick={addLine}>
                       <Plus aria-hidden className="size-4" />
-                      Tambah baris pertama
+                      Tambah komponen pertama
                     </Button>
                   }
                 />
@@ -276,91 +276,114 @@ export default function BomCreatePage() {
                 lines.map((line, index) => (
                   <div
                     key={line.id}
-                    className="space-y-3 rounded-md border border-slate-200 bg-slate-50/60 p-3"
+                    className="rounded-lg border border-slate-200 bg-white p-4 shadow-2xs space-y-3 transition hover:border-slate-300"
                   >
-                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
-                      <Field label={`Komponen #${index + 1}`} required>
-                        <Select
-                          name={`component-${index}`}
-                          required
-                          value={line.componentId}
-                          onChange={(event) =>
-                            updateLine(line.id, {
-                              componentId: event.target.value,
-                              uomId: line.uomId || itemUnitById.get(event.target.value) || "",
-                            })
-                          }
-                        >
-                          <option value="">Pilih komponen</option>
-                          {items
-                            .filter((item) => item.id !== outputItemId)
-                            .map((item) => (
-                              <option key={item.id} value={item.id}>
-                                {item.sku} · {item.name}
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                      <div className="flex items-center gap-2">
+                        <span className="flex size-5 items-center justify-center rounded-full bg-brand-50 text-[11px] font-bold text-brand-700">
+                          {index + 1}
+                        </span>
+                        <span className="text-xs font-semibold text-slate-800">
+                          {line.componentId
+                            ? items.find((i) => i.id === line.componentId)?.name ?? `Komponen #${index + 1}`
+                            : `Komponen #${index + 1}`}
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-600 hover:bg-red-50 hover:text-red-700 h-7 px-2 text-xs"
+                        aria-label={`Hapus komponen #${index + 1}`}
+                        onClick={() => removeLine(line.id)}
+                      >
+                        <Trash2 aria-hidden className="size-3.5" />
+                        Hapus
+                      </Button>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      <div className="sm:col-span-2">
+                        <Field label="Pilih Komponen Bahan" required>
+                          <Select
+                            name={`component-${index}`}
+                            required
+                            value={line.componentId}
+                            onChange={(event) =>
+                              updateLine(line.id, {
+                                componentId: event.target.value,
+                                uomId: itemUnitById.get(event.target.value) || line.uomId || "",
+                              })
+                            }
+                          >
+                            <option value="">Pilih komponen</option>
+                            {items
+                              .filter((item) => item.id !== outputItemId)
+                              .map((item) => (
+                                <option key={item.id} value={item.id}>
+                                  {item.sku} · {item.name}
+                                </option>
+                              ))}
+                          </Select>
+                        </Field>
+                      </div>
+
+                      <div>
+                        <Field label="Kuantitas Pemakaian" required>
+                          <Input
+                            name={`quantity-${index}`}
+                            type="number"
+                            min="0.000001"
+                            step="0.000001"
+                            required
+                            value={line.quantity}
+                            onChange={(event) => updateLine(line.id, { quantity: event.target.value })}
+                          />
+                        </Field>
+                      </div>
+
+                      <div>
+                        <Field label="Satuan (UOM)" required>
+                          <Select
+                            name={`uom-${index}`}
+                            required
+                            value={line.uomId}
+                            onChange={(event) => updateLine(line.id, { uomId: event.target.value })}
+                          >
+                            <option value="">Pilih satuan</option>
+                            {uoms.map((uom) => (
+                              <option key={uom.id} value={uom.id}>
+                                {uom.code} · {uom.name}
                               </option>
                             ))}
-                        </Select>
-                      </Field>
-                      <Field label="Kuantitas" required>
-                        <Input
-                          name={`quantity-${index}`}
-                          type="number"
-                          min="0.000001"
-                          step="0.000001"
-                          required
-                          value={line.quantity}
-                          onChange={(event) => updateLine(line.id, { quantity: event.target.value })}
-                        />
-                      </Field>
-                      <Field label="Satuan" required>
-                        <Select
-                          name={`uom-${index}`}
-                          required
-                          value={line.uomId}
-                          onChange={(event) => updateLine(line.id, { uomId: event.target.value })}
-                        >
-                          <option value="">Pilih satuan</option>
-                          {uoms.map((uom) => (
-                            <option key={uom.id} value={uom.id}>
-                              {uom.code} · {uom.name}
-                            </option>
-                          ))}
-                        </Select>
-                      </Field>
-                      <Field label="Scrap rate" hint="0 = tanpa scrap, maks 0.9999 (99.99%)">
-                        <Input
-                          name={`scrap-${index}`}
-                          type="number"
-                          min="0"
-                          max="0.9999"
-                          step="0.0001"
-                          value={line.scrapRate}
-                          onChange={(event) => updateLine(line.id, { scrapRate: event.target.value })}
-                        />
-                      </Field>
-                      <div className="flex items-end">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-600 hover:bg-red-50 hover:text-red-700"
-                          aria-label={`Hapus komponen #${index + 1}`}
-                          onClick={() => removeLine(line.id)}
-                        >
-                          <Trash2 aria-hidden className="size-4" />
-                          Hapus
-                        </Button>
+                          </Select>
+                        </Field>
                       </div>
-                    </div>
-                    <div>
-                      <Field label="Catatan / Spesifikasi Teknis Komponen (Opsional)" hint="Spesifikasi gambar kerja, toleransi, atau petunjuk perakitan">
-                        <Input
-                          name={`notes-${index}`}
-                          placeholder="contoh: Pasang dengan perekat industri epoksi atau toleransi ±0.05 mm"
-                          value={line.notes ?? ""}
-                          onChange={(event) => updateLine(line.id, { notes: event.target.value })}
-                        />
-                      </Field>
+
+                      <div className="sm:col-span-2 lg:col-span-1">
+                        <Field label="Scrap Rate (Toleransi)" hint="0 = tanpa scrap (maks 0.9999)">
+                          <Input
+                            name={`scrap-${index}`}
+                            type="number"
+                            min="0"
+                            max="0.9999"
+                            step="0.0001"
+                            value={line.scrapRate}
+                            onChange={(event) => updateLine(line.id, { scrapRate: event.target.value })}
+                          />
+                        </Field>
+                      </div>
+
+                      <div className="sm:col-span-2 lg:col-span-3">
+                        <Field label="Catatan / Spesifikasi Teknis (Opsional)" hint="Spesifikasi gambar kerja, toleransi, atau petunjuk perakitan">
+                          <Input
+                            name={`notes-${index}`}
+                            placeholder="contoh: Toleransi dimensi ±0.05 mm atau perekat industri epoksi"
+                            value={line.notes ?? ""}
+                            onChange={(event) => updateLine(line.id, { notes: event.target.value })}
+                          />
+                        </Field>
+                      </div>
                     </div>
                   </div>
                 ))
