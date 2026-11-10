@@ -268,27 +268,28 @@ export default function ReceiptsPage() {
               <Table>
                 <TableHead>
                   <Tr>
-                    <Th>Inspeksi</Th>
-                    <Th>MO</Th>
-                    <Th>Barang</Th>
-                    <Th align="right">Diterima QC</Th>
-                    <Th align="right">Belum diterima</Th>
-                    <Th align="right">Tanggal</Th>
-                    <Th align="right">Aksi</Th>
+                    <Th className="w-[130px]">Inspeksi QC</Th>
+                    <Th className="w-[130px]">Nomor MO</Th>
+                    <Th>Item / Produk</Th>
+                    <Th align="right" className="w-[100px]">Diterima QC</Th>
+                    <Th align="right" className="w-[110px]">Belum Diposting</Th>
+                    <Th align="right" className="w-[100px]">Tanggal</Th>
+                    <Th align="right" className="w-[100px]">Aksi</Th>
                   </Tr>
                 </TableHead>
                 <TableBody>
                   {receivable.map((inspection) => (
                     <Tr key={inspection.id} className={formInspectionId === inspection.id ? "bg-brand-50/60" : undefined}>
-                      <Td className="tnum font-medium">{inspection.number}</Td>
-                      <Td className="tnum text-slate-600">{inspection.manufacturingOrder.number}</Td>
-                      <Td className="text-slate-600">
-                        {inspection.manufacturingOrder.item.sku} — {inspection.manufacturingOrder.item.name}
+                      <Td className="font-mono text-xs font-semibold text-brand-600 whitespace-nowrap">{inspection.number}</Td>
+                      <Td className="font-mono text-xs text-slate-700 whitespace-nowrap">{inspection.manufacturingOrder.number}</Td>
+                      <Td className="text-slate-800 text-xs">
+                        <span className="font-semibold text-slate-900">{inspection.manufacturingOrder.item.sku}</span>
+                        <span className="text-slate-500 block truncate max-w-[200px]">{inspection.manufacturingOrder.item.name}</span>
                       </Td>
-                      <Td align="right" className="tnum text-slate-600">{formatQuantity(inspection.acceptedQty)}</Td>
-                      <Td align="right" className="tnum font-medium text-brand-700">{formatQuantity(remainingAccepted(inspection).toString())}</Td>
-                      <Td align="right" className="tnum text-slate-500">{formatDate(inspection.inspectedAt)}</Td>
-                      <Td align="right">
+                      <Td align="right" className="tnum font-medium text-slate-800 text-xs whitespace-nowrap">{formatQuantity(inspection.acceptedQty)}</Td>
+                      <Td align="right" className="tnum font-bold text-emerald-700 text-xs whitespace-nowrap">{formatQuantity(remainingAccepted(inspection).toString())}</Td>
+                      <Td align="right" className="tnum text-slate-500 text-xs whitespace-nowrap">{formatDate(inspection.inspectedAt)}</Td>
+                      <Td align="right" className="whitespace-nowrap">
                         <Button
                           size="sm"
                           variant={formInspectionId === inspection.id ? "primary" : "secondary"}

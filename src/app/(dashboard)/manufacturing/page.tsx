@@ -330,8 +330,8 @@ export default function ManufacturingPage() {
       <div className="grid gap-5 xl:grid-cols-3">
         <Card className="xl:col-span-2">
           <CardHeader
-            title="Pesanan produksi"
-            description={`${filteredOrders.length} dari ${orders.length} pesanan terdaftar.`}
+            title="Daftar Manufacturing Orders (MO)"
+            description={`${filteredOrders.length} dari ${orders.length} MO terdaftar.`}
             actions={
               <div className="flex items-center gap-2">
                 <SearchInput value={search} onChange={setSearch} placeholder="Cari nomor, SKU, atau barang…" />
@@ -350,10 +350,10 @@ export default function ManufacturingPage() {
           />
           <CardBody className="p-0">
             {loading ? (
-              <div className="p-8 text-center text-slate-500">Memuat pesanan produksi…</div>
+              <div className="p-8 text-center text-slate-500">Memuat Manufacturing Orders…</div>
             ) : filteredOrders.length === 0 ? (
               <EmptyState
-                title={search ? "Tidak ada pesanan yang cocok" : "Belum ada pesanan produksi"}
+                title={search ? "Tidak ada MO yang cocok" : "Belum ada Manufacturing Order (MO)"}
                 description={
                   search
                     ? "Coba ubah kata kunci pencarian Anda."
@@ -365,24 +365,25 @@ export default function ManufacturingPage() {
                 <Table>
                   <TableHead>
                     <Tr>
-                      <Th>Nomor</Th>
-                      <Th>Barang</Th>
-                      <Th align="right">Kuantitas</Th>
-                      <Th>Status</Th>
-                      <Th align="right">Dibuat</Th>
-                      <Th align="right">Aksi</Th>
+                      <Th className="w-[140px]">Nomor MO</Th>
+                      <Th>Item / Produk</Th>
+                      <Th align="right" className="w-[100px]">Target Qty</Th>
+                      <Th className="w-[110px]">Status</Th>
+                      <Th align="right" className="w-[140px]">Tanggal Dibuat</Th>
+                      <Th align="right" className="w-[180px]">Aksi</Th>
                     </Tr>
                   </TableHead>
                   <TableBody>
                     {paginatedOrders.map((order) => (
                     <Tr key={order.id}>
-                      <Td className="tnum font-medium">{order.number}</Td>
-                      <Td className="text-slate-600">
-                        {order.item.sku} — {order.item.name}
+                      <Td className="font-mono text-xs font-semibold text-brand-600 whitespace-nowrap">{order.number}</Td>
+                      <Td className="text-slate-800 text-xs">
+                        <span className="font-semibold text-slate-900">{order.item.sku}</span>
+                        <span className="text-slate-500 block truncate max-w-[280px]">{order.item.name}</span>
                       </Td>
-                      <Td align="right" className="tnum text-slate-600">{formatQuantity(order.quantity)}</Td>
-                      <Td>{<StatusBadge status={order.status} />}</Td>
-                      <Td align="right" className="tnum text-slate-500">{formatDateTime(order.createdAt)}</Td>
+                      <Td align="right" className="tnum font-medium text-slate-900 text-xs whitespace-nowrap">{formatQuantity(order.quantity)}</Td>
+                      <Td className="whitespace-nowrap">{<StatusBadge status={order.status} />}</Td>
+                      <Td align="right" className="tnum text-xs text-slate-500 whitespace-nowrap">{formatDateTime(order.createdAt)}</Td>
                       <Td align="right">
                         {order.status === "DRAFT" ? (
                           <div className="flex items-center justify-end gap-1.5">
@@ -392,7 +393,7 @@ export default function ManufacturingPage() {
                               loading={actingId === order.id}
                               onClick={() => { void handleAction(order, "plan"); }}
                             >
-                              Rencanakan
+                              Plan MO
                             </Button>
                             <Button
                               size="sm"
@@ -412,7 +413,7 @@ export default function ManufacturingPage() {
                               loading={actingId === order.id}
                               onClick={() => { void handleAction(order, "release"); }}
                             >
-                              Rilis
+                              Release MO
                             </Button>
                             <Button
                               size="sm"
@@ -430,13 +431,13 @@ export default function ManufacturingPage() {
                               href={`/manufacturing/materials?orderId=${order.id}`}
                               className="inline-flex items-center rounded border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 shadow-2xs hover:bg-slate-50"
                             >
-                              Material
+                              Material WIP
                             </Link>
                             <Link
                               href={`/manufacturing/work-orders?mo=${encodeURIComponent(order.number)}`}
                               className="inline-flex items-center rounded border border-brand-200 bg-brand-50 px-2 py-1 text-xs font-medium text-brand-700 shadow-2xs hover:bg-brand-100"
                             >
-                              Operasi &rarr;
+                              Work Order &rarr;
                             </Link>
                             <Button
                               size="sm"
@@ -582,7 +583,7 @@ export default function ManufacturingPage() {
                 </Select>
               </Field>
               <Button type="submit" variant="primary" loading={saving} disabled={makeRecommendations.length === 0}>
-                {saving ? "Membuat…" : "Buat pesanan produksi"}
+                {saving ? "Membuat…" : "Buat Manufacturing Order (MO)"}
               </Button>
               <p className="text-[12px] text-slate-500">
                 Belum ada run MRP?{" "}

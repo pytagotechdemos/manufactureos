@@ -279,10 +279,10 @@ export function ItemLifecycleModal({
                 <Table>
                   <TableHead>
                     <Tr>
-                      <Th>Waktu (WIB)</Th>
-                      <Th>Aksi</Th>
-                      <Th>Aktor</Th>
-                      <Th>Sumber</Th>
+                      <Th className="w-[140px]">Waktu (WIB)</Th>
+                      <Th className="w-[120px]">Aksi</Th>
+                      <Th className="w-[160px]">Aktor</Th>
+                      <Th className="w-[90px]">Sumber</Th>
                       <Th>Rincian Perubahan</Th>
                     </Tr>
                   </TableHead>
@@ -345,14 +345,14 @@ export function ItemLifecycleModal({
                 <Table>
                   <TableHead>
                     <Tr>
-                      <Th>Gudang</Th>
-                      <Th align="right">Fisik (On Hand)</Th>
-                      <Th align="right">Dipesan (Reserved)</Th>
-                      <Th align="right">Diblokir (Blocked)</Th>
-                      <Th align="right">Tersedia (Available)</Th>
-                      <Th align="right">Biaya Rata-rata</Th>
-                      <Th align="right">Nilai Stok</Th>
-                      <Th>Valuasi</Th>
+                      <Th className="w-[140px]">Gudang</Th>
+                      <Th align="right" className="w-[100px]">On Hand</Th>
+                      <Th align="right" className="w-[100px]">Reserved</Th>
+                      <Th align="right" className="w-[90px]">Blocked</Th>
+                      <Th align="right" className="w-[100px]">Available</Th>
+                      <Th align="right" className="w-[120px]">Biaya Rata-rata</Th>
+                      <Th align="right" className="w-[120px]">Nilai Stok</Th>
+                      <Th className="w-[90px]">Valuasi</Th>
                     </Tr>
                   </TableHead>
                   <TableBody>
@@ -412,11 +412,11 @@ export function ItemLifecycleModal({
                   <Table>
                     <TableHead>
                       <Tr>
-                        <Th>Nomor BOM</Th>
-                        <Th>Revisi</Th>
-                        <Th align="right">Qty Output</Th>
-                        <Th>Status</Th>
-                        <Th>Tanggal Efektif</Th>
+                        <Th className="w-[140px]">Nomor BOM</Th>
+                        <Th className="w-[90px]">Revisi</Th>
+                        <Th align="right" className="w-[120px]">Qty Output</Th>
+                        <Th className="w-[110px]">Status</Th>
+                        <Th className="w-[140px]">Tanggal Efektif</Th>
                       </Tr>
                     </TableHead>
                     <TableBody>
@@ -452,11 +452,11 @@ export function ItemLifecycleModal({
                   <Table>
                     <TableHead>
                       <Tr>
-                        <Th>Nomor BOM</Th>
+                        <Th className="w-[140px]">Nomor BOM</Th>
                         <Th>Produk Induk</Th>
-                        <Th>Revisi</Th>
-                        <Th>Status BOM</Th>
-                        <Th align="right">Satuan</Th>
+                        <Th className="w-[90px]">Revisi</Th>
+                        <Th className="w-[110px]">Status BOM</Th>
+                        <Th align="right" className="w-[90px]">Satuan</Th>
                       </Tr>
                     </TableHead>
                     <TableBody>

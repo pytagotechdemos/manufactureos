@@ -282,12 +282,12 @@ export default async function AdministrationPage() {
                   <Table>
                     <TableHead>
                       <Tr>
-                        <Th>Nama</Th>
-                        <Th>Email</Th>
+                        <Th className="w-[180px]">Nama</Th>
+                        <Th className="w-[200px]">Email</Th>
                         <Th>Peran</Th>
-                        <Th>Status</Th>
-                        <Th>Dibuat</Th>
-                        <Th align="right">Aksi</Th>
+                        <Th className="w-[110px]">Status</Th>
+                        <Th className="w-[120px]">Dibuat</Th>
+                        <Th align="right" className="w-[100px]">Aksi</Th>
                       </Tr>
                     </TableHead>
                     <TableBody>
@@ -382,12 +382,12 @@ export default async function AdministrationPage() {
                   <Table>
                     <TableHead>
                       <Tr>
-                        <Th>Kode Kategori</Th>
+                        <Th className="w-[150px]">Kode Kategori</Th>
                         <Th>Nama Kategori</Th>
-                        <Th align="right">Total Barang Terkait</Th>
-                        <Th>Status</Th>
-                        <Th>Dibuat</Th>
-                        <Th align="right">Aksi</Th>
+                        <Th align="right" className="w-[160px]">Total Barang Terkait</Th>
+                        <Th className="w-[110px]">Status</Th>
+                        <Th className="w-[120px]">Dibuat</Th>
+                        <Th align="right" className="w-[100px]">Aksi</Th>
                       </Tr>
                     </TableHead>
                     <TableBody>
@@ -446,13 +446,13 @@ export default async function AdministrationPage() {
                   <Table>
                     <TableHead>
                       <Tr>
-                        <Th>Simbol / Kode</Th>
+                        <Th className="w-[130px]">Simbol / Kode</Th>
                         <Th>Nama Satuan</Th>
-                        <Th>Dimensi Fisik</Th>
-                        <Th align="right">Presisi Desimal</Th>
-                        <Th align="right">Digunakan Pada</Th>
-                        <Th>Status</Th>
-                        <Th align="right">Aksi</Th>
+                        <Th className="w-[120px]">Dimensi Fisik</Th>
+                        <Th align="right" className="w-[140px]">Presisi Desimal</Th>
+                        <Th align="right" className="w-[170px]">Digunakan Pada</Th>
+                        <Th className="w-[110px]">Status</Th>
+                        <Th align="right" className="w-[100px]">Aksi</Th>
                       </Tr>
                     </TableHead>
                     <TableBody>
@@ -498,11 +498,11 @@ export default async function AdministrationPage() {
                   <Table>
                     <TableHead>
                       <Tr>
-                        <Th>Satuan Asal (From)</Th>
-                        <Th className="text-center">Arah Hubungan</Th>
-                        <Th>Satuan Tujuan (To)</Th>
-                        <Th align="right">Faktor Rasio (1 Asal = X Tujuan)</Th>
-                        <Th>Didaftarkan</Th>
+                        <Th className="w-[200px]">Satuan Asal (From)</Th>
+                        <Th className="w-[100px] text-center">Arah Hubungan</Th>
+                        <Th className="w-[200px]">Satuan Tujuan (To)</Th>
+                        <Th align="right" className="w-[220px]">Faktor Rasio (1 Asal = X Tujuan)</Th>
+                        <Th className="w-[120px]">Didaftarkan</Th>
                       </Tr>
                     </TableHead>
                     <TableBody>
@@ -563,13 +563,13 @@ export default async function AdministrationPage() {
                   <Table>
                     <TableHead>
                       <Tr>
-                        <Th>Kode Stasiun</Th>
+                        <Th className="w-[140px]">Kode Stasiun</Th>
                         <Th>Nama Work Center</Th>
-                        <Th align="right">Tarif / Jam (IDR)</Th>
-                        <Th align="right">Menit Standar</Th>
-                        <Th align="right">Total WO Ditugaskan</Th>
-                        <Th>Status</Th>
-                        <Th align="right">Aksi</Th>
+                        <Th align="right" className="w-[150px]">Tarif / Jam (IDR)</Th>
+                        <Th align="right" className="w-[120px]">Menit Standar</Th>
+                        <Th align="right" className="w-[160px]">Total WO Ditugaskan</Th>
+                        <Th className="w-[110px]">Status</Th>
+                        <Th align="right" className="w-[100px]">Aksi</Th>
                       </Tr>
                     </TableHead>
                     <TableBody>
@@ -635,14 +635,14 @@ export default async function AdministrationPage() {
                   <Table>
                     <TableHead>
                       <Tr>
-                        <Th>Kode</Th>
-                        <Th>Nama Gudang</Th>
-                        <Th>Tipe Lokasi</Th>
+                        <Th className="w-[120px]">Kode</Th>
+                        <Th className="w-[180px]">Nama Gudang</Th>
+                        <Th className="w-[170px]">Tipe Lokasi</Th>
                         <Th>Deskripsi</Th>
-                        <Th align="right">Total Saldo Stok</Th>
-                        <Th align="right">Mutasi Tercatat</Th>
-                        <Th>Status</Th>
-                        <Th align="right">Aksi</Th>
+                        <Th align="right" className="w-[130px]">Total Saldo Stok</Th>
+                        <Th align="right" className="w-[130px]">Mutasi Tercatat</Th>
+                        <Th className="w-[110px]">Status</Th>
+                        <Th align="right" className="w-[100px]">Aksi</Th>
                       </Tr>
                     </TableHead>
                     <TableBody>
@@ -713,13 +713,13 @@ export default async function AdministrationPage() {
                   <Table>
                     <TableHead>
                       <Tr>
-                        <Th>Kode</Th>
-                        <Th>Nama Pemasok</Th>
-                        <Th>Kontak</Th>
+                        <Th className="w-[120px]">Kode</Th>
+                        <Th className="w-[180px]">Nama Pemasok</Th>
+                        <Th className="w-[180px]">Kontak</Th>
                         <Th>Alamat</Th>
-                        <Th align="right">Pesanan Pembelian (PO)</Th>
-                        <Th>Status</Th>
-                        <Th align="right">Aksi</Th>
+                        <Th align="right" className="w-[160px]">Pesanan Pembelian (PO)</Th>
+                        <Th className="w-[110px]">Status</Th>
+                        <Th align="right" className="w-[100px]">Aksi</Th>
                       </Tr>
                     </TableHead>
                     <TableBody>
@@ -781,11 +781,11 @@ export default async function AdministrationPage() {
                   <Table>
                     <TableHead>
                       <Tr>
-                        <Th>Waktu (WIB)</Th>
-                        <Th>Aktor</Th>
-                        <Th>Modul</Th>
-                        <Th>Aksi</Th>
-                        <Th>Entitas & ID</Th>
+                        <Th className="w-[170px]">Waktu (WIB)</Th>
+                        <Th className="w-[180px]">Aktor</Th>
+                        <Th className="w-[100px]">Modul</Th>
+                        <Th className="w-[140px]">Aksi</Th>
+                        <Th className="w-[160px]">Entitas & ID</Th>
                         <Th>Detail / Metadata</Th>
                       </Tr>
                     </TableHead>

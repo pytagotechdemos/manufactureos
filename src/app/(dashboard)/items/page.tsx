@@ -856,36 +856,36 @@ export default function ItemsPage() {
               <Table>
                 <TableHead>
                   <Tr>
-                    <Th>SKU</Th>
-                    <Th>Nama</Th>
-                    <Th>Kategori</Th>
-                    <Th>Tipe</Th>
-                    <Th>Pengadaan</Th>
-                    <Th align="right">Satuan</Th>
-                    <Th align="right">Biaya std.</Th>
-                    <Th align="right">Lead time</Th>
-                    <Th>Status</Th>
-                    <Th align="right">Aksi</Th>
+                    <Th className="w-[130px]">SKU</Th>
+                    <Th>Nama Item</Th>
+                    <Th className="w-[140px]">Kategori</Th>
+                    <Th className="w-[130px]">Tipe Item</Th>
+                    <Th className="w-[110px]">Supply Type</Th>
+                    <Th align="right" className="w-[70px]">UOM</Th>
+                    <Th align="right" className="w-[120px]">Biaya Std</Th>
+                    <Th align="right" className="w-[90px]">Lead Time</Th>
+                    <Th className="w-[100px]">Status</Th>
+                    <Th align="right" className="w-[130px]">Aksi</Th>
                   </Tr>
                 </TableHead>
                 <TableBody>
                   {paginatedItems.map((item) => (
                     <Tr key={item.id}>
-                      <Td className="tnum font-medium">{item.sku}</Td>
-                      <Td className="text-slate-700">{item.name}</Td>
-                      <Td className="text-slate-600">{item.category?.name ?? "—"}</Td>
-                      <Td className="text-slate-600">{itemTypeLabels[item.itemType] ?? humanize(item.itemType)}</Td>
-                      <Td className="text-slate-600">{supplyTypeLabels[item.supplyType] ?? humanize(item.supplyType)}</Td>
-                      <Td align="right" className="tnum text-slate-600">
+                      <Td className="font-mono text-xs font-semibold text-brand-600 whitespace-nowrap">{item.sku}</Td>
+                      <Td className="font-medium text-slate-900">{item.name}</Td>
+                      <Td className="text-slate-600 text-xs">{item.category?.name ?? "—"}</Td>
+                      <Td className="text-slate-600 text-xs whitespace-nowrap">{itemTypeLabels[item.itemType] ?? humanize(item.itemType)}</Td>
+                      <Td className="text-slate-600 text-xs whitespace-nowrap">{supplyTypeLabels[item.supplyType] ?? humanize(item.supplyType)}</Td>
+                      <Td align="right" className="font-mono text-slate-700 text-xs whitespace-nowrap">
                         {item.baseUom?.code ?? "—"}
                       </Td>
-                      <Td align="right" className="tnum text-slate-600">
+                      <Td align="right" className="tnum text-slate-800 text-xs whitespace-nowrap">
                         {formatMoney(item.standardMaterialCost)}
                       </Td>
-                      <Td align="right" className="tnum text-slate-600">
+                      <Td align="right" className="tnum text-slate-700 text-xs whitespace-nowrap">
                         {item.purchasingLeadDays} hari
                       </Td>
-                      <Td>
+                      <Td className="whitespace-nowrap">
                         <StatusBadge status={item.status} />
                       </Td>
                       <Td align="right">

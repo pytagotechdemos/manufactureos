@@ -7,9 +7,9 @@ export const metadata: Metadata = {
 };
 
 const highlights = [
-  ["Workspace tertutup", "Akun disediakan oleh administrator Anda — tidak ada pendaftaran publik."],
-  ["Teracak dengan baik", "Setiap pencatatannya divalidasi, transaksional, dan ditulis ke jejak audit."],
-  ["Satu alur, dari ujung ke ujung", "Permintaan → MRP → pembelian → produksi → kualitas → biaya."],
+  ["Workspace Tertutup & Terpusat", "Akses akun disediakan oleh administrator melalui kontrol izin berbasis peran (RBAC)."],
+  ["Audit Trail & Integritas Data", "Setiap transaksi tervalidasi, tercatat dalam ledger permanen, dan terlindungi trigger database."],
+  ["Siklus Manufaktur Terintegrasi", "Demand Planning → Perhitungan MRP → Procurement → Produksi & QC → Costing."],
 ] as const;
 
 export default function LoginPage() {
@@ -34,9 +34,9 @@ export default function LoginPage() {
         </div>
 
         <div className="relative">
-          <p className="text-[11px] font-semibold tracking-widest text-brand-300 uppercase">ERP Manufaktur</p>
+          <p className="text-[11px] font-semibold tracking-widest text-brand-300 uppercase">Enterprise Manufacturing ERP</p>
           <h1 className="mt-3 max-w-md text-3xl font-semibold tracking-tight text-balance text-white">
-            Dari permintaan hingga biaya tercapai, dalam satu sistem yang dapat dicek.
+            Sistem ERP Manufaktur Terpadu untuk Operasi Pabrik Modern.
           </h1>
           <dl className="mt-8 space-y-4">
             {highlights.map(([term, description]) => (
@@ -48,7 +48,7 @@ export default function LoginPage() {
           </dl>
         </div>
 
-        <p className="relative text-[12px] text-slate-300/80">Manufaktur diskret · Asia/Jakarta</p>
+        <p className="relative text-[12px] text-slate-300/80">Discrete Manufacturing Monolith · Zona Waktu Asia/Jakarta (WIB)</p>
       </section>
 
       <section className="flex flex-1 items-center justify-center px-4 py-12">

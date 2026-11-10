@@ -107,7 +107,7 @@ export default async function OverviewPage() {
         <Card>
           <CardHeader
             title="Manufacturing Orders Terkini"
-            description="5 pesanan produksi terakhir yang dibuat di sistem."
+            description="5 Manufacturing Orders (MO) terakhir yang dibuat di sistem."
             actions={
               <Link
                 href="/manufacturing"

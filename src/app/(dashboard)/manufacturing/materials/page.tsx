@@ -250,9 +250,9 @@ export default function MaterialsPage() {
             }
           />
           <CardBody className="space-y-4">
-            <Field label="Pesanan produksi" required>
+            <Field label="Pilih Manufacturing Order (MO)" required>
               <Select required value={selectedMoId} onChange={(event) => setSelectedMoId(event.target.value)}>
-                <option value="">Pilih pesanan produksi</option>
+                <option value="">Pilih Manufacturing Order (MO)</option>
                 {orders.map((order) => (
                   <option key={order.id} value={order.id}>
                     {order.number} · {order.item.sku} · {order.status}
@@ -266,7 +266,7 @@ export default function MaterialsPage() {
                 Memuat material…
               </div>
             ) : !detail ? (
-              <EmptyState compact title="Belum ada pesanan dipilih" description="Pilih pesanan produksi di atas." />
+              <EmptyState compact title="Belum ada MO dipilih" description="Pilih Manufacturing Order (MO) di atas." />
             ) : detail.materials.length === 0 ? (
               <EmptyState
                 compact
@@ -288,30 +288,30 @@ export default function MaterialsPage() {
                 <Table>
                   <TableHead>
                     <Tr>
-                      <Th>#</Th>
-                      <Th>Bahan</Th>
-                      <Th align="right">Rencana</Th>
-                      <Th align="right">Terbit</Th>
-                      <Th align="right">Konsumsi</Th>
-                      <Th align="right">Kembali</Th>
-                      <Th align="right">Sisa WIP</Th>
-                      <Th align="right">Aksi</Th>
+                      <Th className="w-[40px]">#</Th>
+                      <Th>Komponen / Bahan</Th>
+                      <Th align="right" className="w-[90px]">Planned</Th>
+                      <Th align="right" className="w-[90px]">Issued</Th>
+                      <Th align="right" className="w-[90px]">Consumed</Th>
+                      <Th align="right" className="w-[90px]">Returned</Th>
+                      <Th align="right" className="w-[100px]">Sisa WIP</Th>
+                      <Th align="right" className="w-[90px]">Aksi</Th>
                     </Tr>
                   </TableHead>
                   <TableBody>
                     {detail.materials.map((material) => (
                       <Tr key={material.id} className={selectedMaterialId === material.id ? "bg-brand-50/60" : undefined}>
-                        <Td className="tnum text-slate-500">{material.sequence}</Td>
+                        <Td className="font-mono text-xs text-slate-400">{material.sequence}</Td>
                         <Td>
-                          <span className="tnum font-medium text-slate-800">{material.item.sku}</span>
-                          <span className="ml-2 text-slate-600">{material.item.name}</span>
+                          <span className="font-mono text-xs font-semibold text-brand-600">{material.item.sku}</span>
+                          <span className="ml-2 text-slate-800 text-xs font-medium">{material.item.name}</span>
                         </Td>
-                        <Td align="right" className="tnum text-slate-600">{formatQuantity(material.plannedQty)}</Td>
-                        <Td align="right" className="tnum text-slate-600">{formatQuantity(material.issuedQty)}</Td>
-                        <Td align="right" className="tnum text-slate-600">{formatQuantity(material.consumedQty)}</Td>
-                        <Td align="right" className="tnum text-slate-600">{formatQuantity(material.returnedQty)}</Td>
-                        <Td align="right" className="tnum font-medium text-brand-700">{formatQuantity(remainingWip(material).toString())}</Td>
-                        <Td align="right">
+                        <Td align="right" className="tnum text-slate-700 text-xs whitespace-nowrap">{formatQuantity(material.plannedQty)}</Td>
+                        <Td align="right" className="tnum text-blue-700 font-medium text-xs whitespace-nowrap">{formatQuantity(material.issuedQty)}</Td>
+                        <Td align="right" className="tnum text-emerald-700 font-medium text-xs whitespace-nowrap">{formatQuantity(material.consumedQty)}</Td>
+                        <Td align="right" className="tnum text-amber-700 text-xs whitespace-nowrap">{formatQuantity(material.returnedQty)}</Td>
+                        <Td align="right" className="tnum font-semibold text-brand-700 text-xs whitespace-nowrap">{formatQuantity(remainingWip(material).toString())}</Td>
+                        <Td align="right" className="whitespace-nowrap">
                           <Button variant="secondary" size="sm" onClick={() => selectMaterial(material)}>
                             Kelola
                           </Button>
@@ -375,7 +375,7 @@ export default function MaterialsPage() {
                           href={`/manufacturing/work-orders?mo=${detail.number}`}
                           className="ml-1 font-semibold underline underline-offset-2 hover:text-emerald-950"
                         >
-                          Buka Pesanan Kerja ({detail.number}) &rarr;
+                          Buka Work Orders ({detail.number}) &rarr;
                         </Link>
                       </span>,
                     );

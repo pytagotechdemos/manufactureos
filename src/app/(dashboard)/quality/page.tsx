@@ -425,7 +425,7 @@ export default function QualityPage() {
       <div className="grid gap-5 xl:grid-cols-3">
         <Card className="xl:col-span-2">
           <CardHeader
-            title="Pesanan Menunggu Pemeriksaan"
+            title="Antrean Inspeksi MO"
             description={`${filteredPending.length} pesanan menunggu inspeksi kualitas.`}
             actions={
               <div className="flex flex-wrap items-center gap-2">
@@ -464,14 +464,14 @@ export default function QualityPage() {
                 <Table>
                   <TableHead>
                     <Tr>
-                      <Th>Nomor MO</Th>
+                      <Th className="w-[140px]">Nomor MO</Th>
                       <Th>Barang</Th>
-                      <Th align="right">Target</Th>
-                      <Th align="right">Diproduksi</Th>
-                      <Th align="right">Diperiksa</Th>
-                      <Th align="right">Sisa QC</Th>
-                      <Th align="right">Rework</Th>
-                      <Th align="right">Aksi</Th>
+                      <Th align="right" className="w-[90px]">Target</Th>
+                      <Th align="right" className="w-[100px]">Diproduksi</Th>
+                      <Th align="right" className="w-[90px]">Diperiksa</Th>
+                      <Th align="right" className="w-[90px]">Sisa QC</Th>
+                      <Th align="right" className="w-[90px]">Rework</Th>
+                      <Th align="right" className="w-[120px]">Aksi</Th>
                     </Tr>
                   </TableHead>
                   <TableBody>
@@ -540,13 +540,13 @@ export default function QualityPage() {
         </Card>
 
         <Card>
-          <CardHeader title="Buat Pemeriksaan" description="Catat disposisi hasil inspeksi kuantitas produksi." />
+          <CardHeader title="Form Input Inspeksi QC" description="Catat disposisi hasil inspeksi kuantitas produksi." />
           <CardBody className="space-y-4">
             <form className="space-y-4" onSubmit={handleCreateInspection}>
               <Field label="Nomor pemeriksaan" required hint="Kosongkan untuk nomor otomatis.">
                 <Input name="number" placeholder={suggestInspectionNumber()} value={formNumber} onChange={(e) => setFormNumber(e.target.value)} />
               </Field>
-              <Field label="Pesanan produksi" required>
+              <Field label="Manufacturing Order (MO)" required>
                 <Select name="manufacturingOrderId" required onChange={(e) => handleSelectMo(e.target.value)} value={formMoId}>
                   <option value="">Pilih MO yang menunggu</option>
                   {pendingOrders.map((mo) => {
@@ -598,7 +598,7 @@ export default function QualityPage() {
                 </div>
               ) : null}
               {workOrders.length > 0 ? (
-                <Field label="Pesanan kerja (opsional)">
+                <Field label="Work Order (WO) (opsional)">
                   <Select name="workOrderId" onChange={(e) => setFormWoId(e.target.value)} value={formWoId}>
                     <option value="">Semua operasi (tingkat MO)</option>
                     {workOrders.map((wo) => (
@@ -640,7 +640,7 @@ export default function QualityPage() {
 
       <Card>
         <CardHeader
-          title="Riwayat Pemeriksaan"
+          title="Riwayat Inspeksi Quality Control"
           description={`${filteredInspections.length} pemeriksaan ditampilkan.`}
           actions={
             <div className="flex flex-wrap items-center gap-2">
@@ -693,15 +693,15 @@ export default function QualityPage() {
               <Table>
                 <TableHead>
                   <Tr>
-                    <Th>Nomor</Th>
-                    <Th>MO</Th>
-                    <Th>Status</Th>
-                    <Th align="right">Diperiksa</Th>
-                    <Th align="right">Diterima</Th>
-                    <Th align="right">Ditolak</Th>
-                    <Th align="right">Rework</Th>
-                    <Th align="right">Waktu diperiksa</Th>
-                    <Th align="right">Aksi</Th>
+                    <Th className="w-[140px]">Nomor QC</Th>
+                    <Th className="w-[140px]">Nomor MO</Th>
+                    <Th className="w-[100px]">Status</Th>
+                    <Th align="right" className="w-[90px]">Diperiksa</Th>
+                    <Th align="right" className="w-[90px]">Diterima</Th>
+                    <Th align="right" className="w-[90px]">Ditolak</Th>
+                    <Th align="right" className="w-[90px]">Rework</Th>
+                    <Th align="right" className="w-[150px]">Waktu Diperiksa</Th>
+                    <Th align="right" className="w-[110px]">Aksi</Th>
                   </Tr>
                 </TableHead>
                 <TableBody>

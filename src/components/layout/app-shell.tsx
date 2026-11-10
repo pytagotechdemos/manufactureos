@@ -10,7 +10,7 @@ function titleForPath(pathname: string): string {
   const match = navItems.find((item) => isActivePath(pathname, item));
   if (match) return match.label;
   const segment = pathname.split("/").filter(Boolean).pop();
-  if (!segment) return "Ringkasan";
+  if (!segment) return "Overview";
   return segment
     .replace(/-/g, " ")
     .replace(/\b\w/g, (character) => character.toUpperCase());
@@ -83,7 +83,7 @@ export function AppShell({ user, children }: { user: SessionUser; children: Reac
 
             <div className="min-w-0">
               <p className="truncate text-[13px] font-medium text-slate-900">{titleForPath(pathname)}</p>
-              <p className="hidden truncate text-[11px] text-slate-500 sm:block">Operasi pabrik · {dateLabel}</p>
+              <p className="hidden truncate text-[11px] text-slate-500 sm:block">Enterprise Discrete Manufacturing · {dateLabel}</p>
             </div>
 
             <div className="ml-auto flex items-center gap-3">

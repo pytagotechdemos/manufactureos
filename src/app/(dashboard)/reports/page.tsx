@@ -370,9 +370,9 @@ export default function ReportsPage() {
 
       <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-2">
         {([
-          { id: "costs", label: "Biaya produksi" },
-          { id: "inventory", label: "Valuasi inventori" },
-          { id: "wip", label: "Nilai WIP" },
+          { id: "costs", label: "Biaya Produksi (MO)" },
+          { id: "inventory", label: "Valuasi Inventory" },
+          { id: "wip", label: "Work In Progress (WIP)" },
         ] as Array<{ id: Tab; label: string }>).map((entry) => (
           <button
             key={entry.id}
@@ -448,7 +448,7 @@ export default function ReportsPage() {
       {tab === "costs" ? (
         <Card>
           <CardHeader
-            title="Biaya produksi per pesanan"
+            title="Biaya Produksi & Variansi per Manufacturing Order (MO)"
             description={`${filteredCosts.length} dari ${costs.length} pesanan · ${costsWithVariance.length} memiliki pembanding estimasi dan aktual.`}
             actions={
               <div className="flex items-center gap-2">
@@ -476,14 +476,14 @@ export default function ReportsPage() {
                   <TableHead>
                     <Tr>
                       <Th className="w-8"></Th>
-                      <Th>Nomor MO</Th>
-                      <Th>SKU</Th>
-                      <Th>Status</Th>
-                      <Th align="right">Estimasi</Th>
-                      <Th align="right">Aktual</Th>
-                      <Th align="right">Variansi</Th>
-                      <Th align="right">Variansi %</Th>
-                      <Th align="right">Aksi</Th>
+                      <Th className="w-[140px]">Nomor MO</Th>
+                      <Th className="w-[140px]">SKU</Th>
+                      <Th className="w-[110px]">Status</Th>
+                      <Th align="right" className="w-[120px]">Estimasi</Th>
+                      <Th align="right" className="w-[120px]">Aktual</Th>
+                      <Th align="right" className="w-[120px]">Variansi</Th>
+                      <Th align="right" className="w-[90px]">Variansi %</Th>
+                      <Th align="right" className="w-[120px]">Aksi</Th>
                     </Tr>
                   </TableHead>
                   <TableBody>
@@ -671,7 +671,7 @@ export default function ReportsPage() {
                                       href={`/manufacturing/work-orders?mo=${row.moId}`}
                                       className="inline-flex items-center gap-1 font-medium text-brand-600 hover:text-brand-800 hover:underline"
                                     >
-                                      Periksa Perintah Kerja (WO)
+                                      Periksa Work Orders (WO)
                                       <ExternalLink aria-hidden className="size-3" />
                                     </Link>
                                     <span className="text-slate-300">&middot;</span>
@@ -708,7 +708,7 @@ export default function ReportsPage() {
       {tab === "inventory" ? (
         <Card>
           <CardHeader
-            title="Valuasi inventori"
+            title="Valuasi Stok Persediaan (Inventory Valuation)"
             description={`${filteredValuation.length} dari ${valuationRows.length} saldo · nilai persediaan berdasarkan on hand dan biaya rata-rata bergerak.`}
             actions={
               <div className="flex items-center gap-2">
@@ -741,12 +741,12 @@ export default function ReportsPage() {
                   <Table>
                     <TableHead>
                       <Tr>
-                        <Th>SKU</Th>
-                        <Th>Barang</Th>
-                        <Th>Gudang</Th>
-                        <Th align="right">On hand</Th>
-                        <Th align="right">Biaya rata-rata</Th>
-                        <Th align="right">Nilai</Th>
+                        <Th className="w-[140px]">SKU</Th>
+                        <Th>Nama Barang</Th>
+                        <Th className="w-[110px]">Gudang</Th>
+                        <Th align="right" className="w-[110px]">On Hand</Th>
+                        <Th align="right" className="w-[130px]">Biaya Rata-rata</Th>
+                        <Th align="right" className="w-[140px]">Nilai Buku</Th>
                       </Tr>
                     </TableHead>
                     <TableBody>
@@ -784,7 +784,7 @@ export default function ReportsPage() {
       {tab === "wip" ? (
         <Card>
           <CardHeader
-            title="Nilai barang dalam proses"
+            title="Valuasi Work In Progress (WIP)"
             description={`${filteredWip.length} dari ${wipRows.length} pesanan · nilai WIP dari pesanan yang selesai dengan output parsial.`}
             actions={
               <div className="flex items-center gap-2">
@@ -819,10 +819,10 @@ export default function ReportsPage() {
                 <Table>
                   <TableHead>
                     <Tr>
-                      <Th>Nomor MO</Th>
-                      <Th>SKU</Th>
-                      <Th>Status</Th>
-                      <Th align="right">Nilai WIP</Th>
+                      <Th className="w-[160px]">Nomor MO</Th>
+                      <Th>SKU Barang</Th>
+                      <Th className="w-[120px]">Status</Th>
+                      <Th align="right" className="w-[150px]">Nilai Saldo WIP</Th>
                     </Tr>
                   </TableHead>
                   <TableBody>

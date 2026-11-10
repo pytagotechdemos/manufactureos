@@ -634,11 +634,11 @@ export function PlanningScreen({ permissions }: { permissions: Permissions }) {
                 <Table>
                   <TableHead>
                     <Tr>
-                      <Th>Nomor</Th>
+                      <Th className="w-[140px]">Nomor</Th>
                       <Th>Baris Barang</Th>
-                      <Th>Kebutuhan Paling Awal</Th>
-                      <Th>Status</Th>
-                      <Th align="right">Aksi</Th>
+                      <Th className="w-[170px]">Kebutuhan Paling Awal</Th>
+                      <Th className="w-[110px]">Status</Th>
+                      <Th align="right" className="w-[120px]">Aksi</Th>
                     </Tr>
                   </TableHead>
                   <TableBody>
@@ -775,13 +775,13 @@ export function PlanningScreen({ permissions }: { permissions: Permissions }) {
                           <Table>
                             <TableHead>
                               <Tr>
-                                <Th>Barang</Th>
-                                <Th>Tipe</Th>
-                                <Th align="right">Kuantitas</Th>
-                                <Th>Dibutuhkan</Th>
-                                <Th>Rencana Rilis</Th>
-                                <Th>Status</Th>
-                                <Th align="right">Aksi</Th>
+                                <Th className="w-[200px]">Barang</Th>
+                                <Th className="w-[120px]">Supply Type</Th>
+                                <Th align="right" className="w-[120px]">Kuantitas</Th>
+                                <Th className="w-[130px]">Dibutuhkan</Th>
+                                <Th className="w-[130px]">Rencana Rilis</Th>
+                                <Th className="w-[110px]">Status</Th>
+                                <Th align="right" className="w-[110px]">Aksi</Th>
                               </Tr>
                             </TableHead>
                             <TableBody>
@@ -867,12 +867,12 @@ export function PlanningScreen({ permissions }: { permissions: Permissions }) {
                       <Table>
                         <TableHead>
                           <Tr>
-                            <Th>Tanggal</Th>
+                            <Th className="w-[120px]">Tanggal</Th>
                             <Th>Barang</Th>
-                            <Th align="right">Kotor</Th>
-                            <Th align="right">Penerimaan</Th>
-                            <Th align="right">Tersisa</Th>
-                            <Th align="right">Kebutuhan Net</Th>
+                            <Th align="right" className="w-[120px]">Gross Req</Th>
+                            <Th align="right" className="w-[120px]">Penerimaan</Th>
+                            <Th align="right" className="w-[130px]">Proyeksi Stok</Th>
+                            <Th align="right" className="w-[120px]">Net Req</Th>
                           </Tr>
                         </TableHead>
                         <TableBody>

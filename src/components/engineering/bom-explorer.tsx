@@ -542,10 +542,10 @@ export function BomExplorer({ canApprove, canCreate }: { canApprove: boolean; ca
                         <Tr>
                           <Th className="w-12">#</Th>
                           <Th>Komponen</Th>
-                          <Th>Tipe Pasok</Th>
-                          <Th align="right">Kuantitas</Th>
-                          <Th align="right">Scrap (%)</Th>
-                          <Th>Catatan</Th>
+                          <Th className="w-[120px]">Supply Type</Th>
+                          <Th align="right" className="w-[120px]">Kuantitas</Th>
+                          <Th align="right" className="w-[90px]">Scrap (%)</Th>
+                          <Th className="w-[160px]">Catatan</Th>
                         </Tr>
                       </TableHead>
                       <TableBody>
@@ -586,9 +586,9 @@ export function BomExplorer({ canApprove, canCreate }: { canApprove: boolean; ca
                 <div className="rounded-md border border-slate-200 bg-slate-50/60 p-4 space-y-3">
                   <div className="flex flex-wrap items-end justify-between gap-3">
                     <div>
-                      <h4 className="text-sm font-semibold text-slate-800">Eksplosi Kebutuhan Bahan</h4>
+                      <h4 className="text-sm font-semibold text-slate-800">Kalkulasi Kebutuhan Bahan (BOM Explosion)</h4>
                       <p className="text-xs text-slate-500">
-                        Hitung seluruh kebutuhan bahan baku (level daun) untuk target kuantitas output yang diminta.
+                        Hitung kebutuhan bahan baku bertingkat (BOM explosion) untuk target kuantitas output yang ditentukan.
                       </p>
                     </div>
                     <div className="flex items-center gap-2">

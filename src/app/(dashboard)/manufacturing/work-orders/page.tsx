@@ -89,7 +89,7 @@ export default function WorkOrdersPage() {
         fetch("/api/v1/manufacturing/work-orders?limit=100&offset=0"),
         fetch("/api/v1/manufacturing/work-centers"),
       ]);
-      if (!firstWorkOrders.ok || !workCenterResponse.ok) throw new Error("Gagal memuat pesanan kerja");
+      if (!firstWorkOrders.ok || !workCenterResponse.ok) throw new Error("Gagal memuat Work Orders");
       const [firstPage, workCenterJson] = await Promise.all([firstWorkOrders.json(), workCenterResponse.json()]);
       const total = Number(firstPage.page?.total ?? firstPage.data?.length ?? 0);
       const offsets = Array.from({ length: Math.max(0, Math.ceil(total / 100) - 1) }, (_, index) => (index + 1) * 100);
@@ -97,14 +97,14 @@ export default function WorkOrdersPage() {
       for (let index = 0; index < offsets.length; index += 10) {
         pages.push(...await Promise.all(offsets.slice(index, index + 10).map(async (offset) => {
           const response = await fetch(`/api/v1/manufacturing/work-orders?limit=100&offset=${offset}`);
-          if (!response.ok) throw new Error("Gagal memuat seluruh pesanan kerja");
+          if (!response.ok) throw new Error("Gagal memuat seluruh Work Orders");
           return response.json();
         })));
       }
       setOrders([...(firstPage.data ?? []), ...pages.flatMap((page) => page.data ?? [])]);
       setWorkCenters(workCenterJson.data ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memuat pesanan kerja");
+      setError(err instanceof Error ? err.message : "Gagal memuat Work Orders");
     } finally {
       setLoading(false);
     }
@@ -211,11 +211,11 @@ export default function WorkOrdersPage() {
         body: body ? JSON.stringify(body) : undefined,
       });
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error?.message ?? "Aksi pesanan kerja gagal");
+      if (!res.ok) throw new Error(json?.error?.message ?? "Aksi Work Order gagal");
       if (successMessage) setNotice(successMessage);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Aksi pesanan kerja gagal");
+      setError(err instanceof Error ? err.message : "Aksi Work Order gagal");
       throw err;
     } finally {
       setSaving(false);
@@ -435,8 +435,8 @@ export default function WorkOrdersPage() {
       <div className="grid gap-5 xl:grid-cols-3">
         <Card className="xl:col-span-2">
           <CardHeader
-            title="Pesanan kerja"
-            description={`${filtered.length} pesanan ditampilkan.`}
+            title="Daftar Work Orders (WO)"
+            description={`${filtered.length} Work Orders ditampilkan.`}
             actions={
               <div className="flex flex-wrap items-center gap-2">
                 <SearchInput
@@ -457,13 +457,13 @@ export default function WorkOrdersPage() {
           />
           <CardBody className="p-0">
             {loading ? (
-              <div className="p-8 text-center text-slate-500">Memuat pesanan kerja…</div>
+              <div className="p-8 text-center text-slate-500">Memuat Work Orders…</div>
             ) : filtered.length === 0 ? (
               <EmptyState
-                title="Belum ada pesanan kerja"
+                title="Belum ada Work Orders"
                 description={
                   search || filter !== "SEMUA"
-                    ? "Tidak ada pesanan kerja cocok dengan kriteria filter."
+                    ? "Tidak ada Work Order cocok dengan kriteria filter."
                     : "Rilis pesanan produksi terlebih dahulu di halaman Produksi."
                 }
               />
@@ -472,31 +472,31 @@ export default function WorkOrdersPage() {
                 <Table>
                   <TableHead>
                     <Tr>
-                      <Th>Nomor</Th>
-                      <Th>MO</Th>
-                      <Th>Operasi</Th>
-                      <Th>Work center</Th>
-                      <Th>Status</Th>
-                      <Th align="right">Target</Th>
-                      <Th align="right">Selesai</Th>
-                      <Th align="right">Reject</Th>
-                      <Th align="right">Menit</Th>
-                      <Th align="right">Aksi</Th>
+                      <Th className="w-[120px]">Nomor WO</Th>
+                      <Th className="w-[120px]">Nomor MO</Th>
+                      <Th className="w-[110px]">Operasi</Th>
+                      <Th className="w-[110px]">Work Center</Th>
+                      <Th className="w-[90px]">Status</Th>
+                      <Th align="right" className="w-[80px]">Target</Th>
+                      <Th align="right" className="w-[80px]">Selesai</Th>
+                      <Th align="right" className="w-[70px]">Reject</Th>
+                      <Th align="right" className="w-[70px]">Menit</Th>
+                      <Th align="right" className="w-[90px]">Aksi</Th>
                     </Tr>
                   </TableHead>
                   <TableBody>
                     {paginatedOrders.map((order) => (
                       <Tr key={order.id} className={selectedId === order.id ? "bg-brand-50/60" : undefined}>
-                        <Td className="tnum font-medium">{order.number}</Td>
-                        <Td className="tnum text-slate-600">{order.manufacturingOrder.number}</Td>
-                        <Td className="text-slate-600">{order.operationCode}</Td>
-                        <Td className="tnum text-slate-600">{order.workCenter?.code ?? "—"}</Td>
-                        <Td>{<StatusBadge status={order.status} />}</Td>
-                        <Td align="right" className="tnum text-slate-600">{formatQuantity(order.targetQuantity)}</Td>
-                        <Td align="right" className="tnum text-slate-600">{formatQuantity(order.completedQty)}</Td>
-                        <Td align="right" className="tnum text-slate-600">{formatQuantity(order.rejectedQty)}</Td>
-                        <Td align="right" className="tnum text-slate-600">{formatQuantity(order.timeEntries.reduce((total, entry) => total.plus(entry.minutes), new Decimal(0)).toString())}</Td>
-                        <Td align="right">
+                        <Td className="font-mono text-xs font-semibold text-brand-600 whitespace-nowrap">{order.number}</Td>
+                        <Td className="font-mono text-xs text-slate-700 whitespace-nowrap">{order.manufacturingOrder.number}</Td>
+                        <Td className="text-slate-800 text-xs font-medium whitespace-nowrap">{order.operationCode}</Td>
+                        <Td className="font-mono text-xs text-slate-700 whitespace-nowrap">{order.workCenter?.code ?? "—"}</Td>
+                        <Td className="whitespace-nowrap">{<StatusBadge status={order.status} />}</Td>
+                        <Td align="right" className="tnum font-medium text-slate-900 text-xs whitespace-nowrap">{formatQuantity(order.targetQuantity)}</Td>
+                        <Td align="right" className="tnum text-emerald-700 font-medium text-xs whitespace-nowrap">{formatQuantity(order.completedQty)}</Td>
+                        <Td align="right" className="tnum text-rose-700 text-xs whitespace-nowrap">{formatQuantity(order.rejectedQty)}</Td>
+                        <Td align="right" className="tnum text-slate-700 text-xs whitespace-nowrap">{formatQuantity(order.timeEntries.reduce((total, entry) => total.plus(entry.minutes), new Decimal(0)).toString())}</Td>
+                        <Td align="right" className="whitespace-nowrap">
                           <Button variant="secondary" size="sm" onClick={() => selectOrder(order)}>
                             Kelola
                           </Button>
@@ -522,12 +522,12 @@ export default function WorkOrdersPage() {
 
         <Card>
           <CardHeader
-            title="Kelola pesanan kerja"
-            description={selectedOrder ? `${selectedOrder.number} · ${selectedOrder.manufacturingOrder.item.sku}` : "Pilih pesanan kerja dari tabel."}
+            title="Kelola Work Order (WO)"
+            description={selectedOrder ? `${selectedOrder.number} · ${selectedOrder.manufacturingOrder.item.sku}` : "Pilih Work Order dari tabel."}
           />
           <CardBody className="space-y-5">
             {!selectedOrder ? (
-              <EmptyState compact title="Belum ada pesanan dipilih" description="Klik Kelola pada salah satu pesanan kerja." />
+              <EmptyState compact title="Belum ada Work Order dipilih" description="Klik Kelola pada salah satu Work Order." />
             ) : (
               <>
                 <dl className="grid grid-cols-2 gap-3 text-[13px]">
@@ -640,14 +640,14 @@ export default function WorkOrdersPage() {
                         />
                       </Field>
                       <Button type="submit" variant="primary" size="sm" loading={saving}>
-                        Selesaikan pesanan kerja
+                        Selesaikan Work Order (WO)
                       </Button>
                     </form>
                   </>
                 ) : null}
 
                 {selectedOrder.status === "COMPLETED" ? (
-                  <Alert tone="success">Pesanan kerja ini sudah selesai. Output masuk ke antrean QC bila semua pesanan kerja MO selesai.</Alert>
+                  <Alert tone="success">Work Order ini telah selesai. Output akan masuk ke antrean QC setelah seluruh operasi WO pada MO selesai.</Alert>
                 ) : null}
               </>
             )}
