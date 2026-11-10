@@ -8,10 +8,10 @@ export function Table({ children, className = "" }: { children: ReactNode; class
   );
 }
 
-export function TableHead({ children }: { children: ReactNode }) {
+export function TableHead({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <thead className="bg-slate-50">
-      <tr className="border-b border-slate-200">{children}</tr>
+    <thead className={`bg-slate-50 border-b border-slate-200 ${className}`}>
+      {children}
     </thead>
   );
 }

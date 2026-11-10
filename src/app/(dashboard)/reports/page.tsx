@@ -344,9 +344,9 @@ export default function ReportsPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Biaya & laporan"
-        title="Biaya & laporan"
-        description="Estimasi dan aktual biaya produksi, variansi, valuasi inventori, serta nilai WIP."
+        eyebrow="Finance & Cost Accounting"
+        title="Costing & Analisis Variansi"
+        description="Estimasi vs aktual biaya produksi, variansi material/labor/overhead, valuasi inventory bergerak, serta nilai WIP."
         actions={
           <Button variant="secondary" onClick={() => { void load(); }} loading={loading}>
             Muat ulang

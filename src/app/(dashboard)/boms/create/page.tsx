@@ -165,9 +165,9 @@ export default function BomCreatePage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Teknik"
-        title="Buat BOM"
-        description="Susun draf Bill of Materials: barang output, komponen, kuantitas, satuan, dan tingkat sisa."
+        eyebrow="Engineering"
+        title="Buat Bill of Materials (BOM)"
+        description="Susun draf Bill of Materials: output produk jadi/sub-assembly, komponen, kuantitas, UOM, dan scrap rate."
         actions={
           <Link className={linkButtonClasses} href="/engineering">
             Eksplorasi BOM

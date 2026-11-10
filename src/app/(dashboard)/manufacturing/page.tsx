@@ -312,8 +312,8 @@ export default function ManufacturingPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Operasi"
-        title="Pesanan Produksi (MO)"
+        eyebrow="Shop Floor & Manufacturing"
+        title="Manufacturing Orders (MO)"
         description="Pesanan produksi dibuat dari rekomendasi MRP, lalu direncanakan dan dirilis ke lantai produksi."
         actions={
           <Button variant="secondary" onClick={() => { void load(); }} loading={loading}>

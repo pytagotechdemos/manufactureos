@@ -474,9 +474,9 @@ export default function InventoryPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Inventori"
-        title="Persediaan"
-        description="Saldo stok per gudang serta transaksi penerimaan, pengeluaran, transfer, penyesuaian, dan pemblokiran karantina."
+        eyebrow="Supply Chain & Inventory"
+        title="Inventory & Stock Ledger"
+        description="Saldo stok per gudang, reservasi material, transfer, penyesuaian (adjustment), dan karantina stok diblokir."
         actions={
           <Button variant="secondary" onClick={() => { void load(); }} loading={loading}>
             Muat ulang

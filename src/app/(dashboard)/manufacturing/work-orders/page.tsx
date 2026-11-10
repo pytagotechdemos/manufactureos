@@ -324,9 +324,9 @@ export default function WorkOrdersPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Operasi"
-        title="Eksekusi Perintah Kerja (Work Orders)"
-        description="Tetapkan work center, mulai/jeda pekerjaan, catat waktu aktual, dan selesaikan output."
+        eyebrow="Shop Floor & Manufacturing"
+        title="Eksekusi Work Orders (WO)"
+        description="Tetapkan work center, jalankan start/pause, catat waktu aktual, dan selesaikan output operasi."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="secondary" onClick={() => setWcModalOpen(true)}>

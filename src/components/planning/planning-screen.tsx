@@ -436,9 +436,9 @@ export function PlanningScreen({ permissions }: { permissions: Permissions }) {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Rantai pasok"
+        eyebrow="Supply Chain & Planning"
         title="Perencanaan & MRP"
-        description="Kelola permintaan produksi, jalankan perhitungan kebutuhan bersih MRP, dan hasilkan rekomendasi pengadaan/produksi."
+        description="Kelola production demand, kalkulasi kebutuhan material MRP, dan terbitkan rekomendasi PO/MO."
         actions={
           <Button variant="secondary" onClick={() => { void refresh(); }} loading={loading}>
             Muat ulang

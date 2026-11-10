@@ -191,9 +191,9 @@ export default async function AdministrationPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Konfigurasi & Master Data"
-        title="Administrasi"
-        description="Kelola pengguna, master kategori, satuan (UOM), work center, gudang, pemasok, dan periksa jejak audit sistem."
+        eyebrow="System Configuration"
+        title="Administrasi Sistem"
+        description="Kelola hak akses pengguna, master kategori, satuan (UOM), work center, gudang, supplier, dan audit trail log."
       />
 
       <StatGrid>

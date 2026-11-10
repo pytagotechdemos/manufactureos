@@ -5,10 +5,10 @@ import { usePathname } from "next/navigation";
 import { ArrowDownToLine, Clock, Factory, Layers } from "lucide-react";
 
 const links = [
-  { href: "/manufacturing", label: "Pesanan Produksi (MO)", icon: Factory, exact: true },
+  { href: "/manufacturing", label: "Manufacturing Orders (MO)", icon: Factory, exact: true },
   { href: "/manufacturing/materials", label: "Material & WIP", icon: Layers },
-  { href: "/manufacturing/work-orders", label: "Perintah Kerja (WO)", icon: Clock },
-  { href: "/manufacturing/receipts", label: "Penerimaan Hasil Produksi", icon: ArrowDownToLine },
+  { href: "/manufacturing/work-orders", label: "Work Orders (WO)", icon: Clock },
+  { href: "/manufacturing/receipts", label: "Production Receipts", icon: ArrowDownToLine },
 ];
 
 export function ManufacturingNav() {

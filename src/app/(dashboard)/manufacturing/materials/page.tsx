@@ -221,9 +221,9 @@ export default function MaterialsPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Operasi"
-        title="Material Pesanan Produksi & WIP"
-        description="Terbitkan bahan dari gudang ke WIP, catat konsumsi aktual, dan kembalikan sisa material."
+        eyebrow="Shop Floor & Manufacturing"
+        title="Material MO & Work In Progress (WIP)"
+        description="Terbitkan komponen dari gudang ke WIP, catat konsumsi aktual, dan proses pengembalian sisa material."
         actions={
           <Button variant="secondary" onClick={() => { void loadOrders(); }} loading={loading}>
             Muat ulang

@@ -428,9 +428,9 @@ export default function ItemsPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Data master"
-        title="Data Master Barang & Satuan"
-        description="Bahan baku, komponen pembelian, sub-assembly, barang jadi, serta rasio konversi satuan ukuran (UOM)."
+        eyebrow="Master Data"
+        title="Item Master & Satuan (UOM)"
+        description="Kelola bahan baku, komponen pembelian, sub-assembly, barang jadi, serta konversi rasio antar satuan (UOM)."
         actions={
           activeTab === "items" ? (
             <div className="flex items-center gap-2">

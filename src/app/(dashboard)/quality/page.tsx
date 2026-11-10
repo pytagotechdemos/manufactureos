@@ -401,9 +401,9 @@ export default function QualityPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Kontrol kualitas"
-        title="Kontrol Kualitas"
-        description="Periksa kuantitas hasil produksi aktual dan tetapkan disposisi penerimaan, penolakan, atau rework."
+        eyebrow="Quality Assurance"
+        title="Quality Control (QC)"
+        description="Inspeksi mutu hasil produksi aktual dan tetapkan disposisi: diterima (accepted), ditolak (rejected), atau perbaikan (rework)."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Link

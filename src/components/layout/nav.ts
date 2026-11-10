@@ -30,32 +30,32 @@ export const navGroups: NavGroup[] = [
     items: [{ label: "Ringkasan", href: "/overview", icon: LayoutDashboard }],
   },
   {
-    label: "Teknik",
+    label: "Engineering & Master Data",
     items: [
-      { label: "Data Barang", href: "/items", icon: Package },
-      { label: "Bill of Material", href: "/engineering", match: ["/engineering", "/boms"], icon: GitBranch },
+      { label: "Item Master", href: "/items", icon: Package },
+      { label: "Bill of Materials (BOM)", href: "/engineering", match: ["/engineering", "/boms"], icon: GitBranch },
     ],
   },
   {
-    label: "Rantai Pasok",
+    label: "Supply Chain & Planning",
     items: [
       { label: "Perencanaan & MRP", href: "/planning", icon: CalendarRange },
-      { label: "Pembelian", href: "/procurement", icon: ShoppingCart },
-      { label: "Inventori", href: "/inventory", icon: Warehouse },
+      { label: "Procurement (PO & PR)", href: "/procurement", icon: ShoppingCart },
+      { label: "Inventory & Stock", href: "/inventory", icon: Warehouse },
     ],
   },
   {
-    label: "Operasi",
+    label: "Manufacturing & QC",
     items: [
-      { label: "Produksi", href: "/manufacturing", match: ["/manufacturing"], icon: Factory },
-      { label: "Kualitas", href: "/quality", icon: ClipboardCheck },
+      { label: "Manufacturing Orders", href: "/manufacturing", match: ["/manufacturing"], icon: Factory },
+      { label: "Quality Control (QC)", href: "/quality", icon: ClipboardCheck },
     ],
   },
   {
-    label: "Wawasan",
+    label: "Finance & Admin",
     items: [
-      { label: "Biaya & Laporan", href: "/reports", icon: BarChart3 },
-      { label: "Administrasi", href: "/administration", icon: Settings },
+      { label: "Costing & Reports", href: "/reports", icon: BarChart3 },
+      { label: "Administration", href: "/administration", icon: Settings },
     ],
   },
 ];

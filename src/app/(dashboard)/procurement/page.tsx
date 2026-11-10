@@ -742,9 +742,9 @@ export default function ProcurementPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Rantai Pasok"
-        title="Pengadaan & Pembelian"
-        description="Kelola siklus pengadaan terpadu: Permintaan Pembelian (PR), Pesanan Pembelian (PO), Persetujuan, dan Penerimaan Barang (GR) ke stok."
+        eyebrow="Supply Chain"
+        title="Procurement & Pembelian"
+        description="Kelola siklus pengadaan terpadu: Purchase Requests (PR), Purchase Orders (PO), Approval, dan Goods Receipt (GRN) ke stok gudang."
         actions={
           <Button variant="secondary" onClick={() => { void load(); }} loading={loading}>
             Muat ulang
@@ -767,7 +767,7 @@ export default function ProcurementPage() {
           }`}
         >
           <ShoppingBag className="size-4" />
-          Pesanan Pembelian (PO) ({purchaseOrders.length})
+          Purchase Orders (PO) ({purchaseOrders.length})
         </button>
         <button
           type="button"
@@ -779,7 +779,7 @@ export default function ProcurementPage() {
           }`}
         >
           <FileText className="size-4" />
-          Permintaan Pembelian (PR) ({purchaseRequests.length})
+          Purchase Requests (PR) ({purchaseRequests.length})
         </button>
         <button
           type="button"
@@ -791,7 +791,7 @@ export default function ProcurementPage() {
           }`}
         >
           <Truck className="size-4" />
-          Penerimaan Barang (GR) ({goodsReceipts.length})
+          Goods Receipts (GRN) ({goodsReceipts.length})
         </button>
       </div>
 

@@ -235,9 +235,9 @@ export default function ReceiptsPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Operasi"
-        title="Penerimaan Hasil Produksi"
-        description="Posting kuantitas diterima dari inspeksi QC yang sudah diposting ke stok barang jadi."
+        eyebrow="Shop Floor & Manufacturing"
+        title="Production Receipts (Penerimaan Produksi)"
+        description="Posting kuantitas diterima dari inspeksi QC ke saldo stok gudang barang jadi (FG) atau sub-assembly."
         actions={
           <Button variant="secondary" onClick={() => { void load(); }} loading={loading}>
             Muat ulang

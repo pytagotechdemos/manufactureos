@@ -278,9 +278,9 @@ export function BomExplorer({ canApprove, canCreate }: { canApprove: boolean; ca
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Teknik"
-        title="Eksplorasi BOM"
-        description="Tinjau revisi BOM, periksa struktur komponen, dan hitung kebutuhan bahan baku hierarkis."
+        eyebrow="Engineering"
+        title="Bill of Materials (BOM) Explorer"
+        description="Tinjau revisi BOM, kelola status persetujuan, dan simulasikan ledakan kebutuhan bahan baku (explosion)."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {canCreate ? (

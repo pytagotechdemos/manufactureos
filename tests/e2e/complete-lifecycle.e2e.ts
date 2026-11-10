@@ -14,7 +14,7 @@ test.describe("Complete manufacturing lifecycle", () => {
     await expect(page).toHaveURL("/overview", { timeout: 30_000 });
 
     // 2. Navigate to Item Master and verify seed items exist
-    const navItems = page.locator('nav a:has-text("Data Barang"), nav a:has-text("Items"), nav a:has-text("Barang")').first();
+    const navItems = page.locator('nav a:has-text("Item Master"), nav a:has-text("Data Barang"), nav a:has-text("Items"), nav a:has-text("Barang")').first();
     if (await navItems.isVisible()) {
       await navItems.click();
     } else {
@@ -26,7 +26,7 @@ test.describe("Complete manufacturing lifecycle", () => {
 
     // 3. Navigate to BOM create and verify BOM page loads
     await page.goto("/boms/create");
-    await expect(page.locator("h1:has-text('Buat BOM'), h1:has-text('Create BOM')")).toBeVisible();
+    await expect(page.locator("h1:has-text('Buat BOM'), h1:has-text('Create BOM'), h1:has-text('Bill of Materials')")).toBeVisible();
     await expect(page.locator('input[placeholder*="BOM-"]')).toBeVisible();
 
     // 4. Navigate to Planning & MRP
@@ -47,7 +47,7 @@ test.describe("Complete manufacturing lifecycle", () => {
 
     // 8. Navigate to Work Order Execution
     await page.goto("/manufacturing/work-orders");
-    await expect(page.locator("h1:has-text('Eksekusi Perintah Kerja'), h1:has-text('Eksekusi pesanan kerja'), h1:has-text('Work Order Execution')")).toBeVisible();
+    await expect(page.locator("h1:has-text('Eksekusi Work Orders'), h1:has-text('Eksekusi Perintah Kerja'), h1:has-text('Work Order Execution')")).toBeVisible();
 
     // 9. Navigate to Quality Control
     await page.goto("/quality");
@@ -55,11 +55,11 @@ test.describe("Complete manufacturing lifecycle", () => {
 
     // 10. Navigate to Production Receipts
     await page.goto("/manufacturing/receipts");
-    await expect(page.locator("h1:has-text('Penerimaan Hasil Produksi'), h1:has-text('Terima Produksi'), h1:has-text('Production Receipts')")).toBeVisible();
+    await expect(page.locator("h1:has-text('Penerimaan Hasil Produksi'), h1:has-text('Production Receipts'), h1:has-text('Terima Produksi')")).toBeVisible();
 
     // 11. Navigate to Reports (Costing)
     await page.goto("/reports");
-    await expect(page.locator("h1:has-text('Biaya & laporan'), h1:has-text('Costing & Reports')")).toBeVisible();
+    await expect(page.locator("h1:has-text('Biaya & laporan'), h1:has-text('Costing & Reports'), h1:has-text('Costing & Analisis')")).toBeVisible();
 
     // 12. Navigate to Administration
     await page.goto("/administration");
