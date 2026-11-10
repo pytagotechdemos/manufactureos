@@ -12,6 +12,10 @@ describe("UOM conversion", () => {
     expect(normalizeToBaseUom("1250", "MM", "M", units, [{ from: "MM", to: "M", factor: "0.001" }])).toBe("1.25");
   });
 
+  it("derives reciprocal conversion from a stored directed edge", () => {
+    expect(normalizeToBaseUom("1", "M", "MM", units, [{ from: "MM", to: "M", factor: "0.001" }])).toBe("1000");
+  });
+
   it("supports directed conversion chains", () => {
     expect(normalizeToBaseUom("2", "MM", "M", units, [
       { from: "MM", to: "CM", factor: "0.1" },

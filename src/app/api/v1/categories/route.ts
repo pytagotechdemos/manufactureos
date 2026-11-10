@@ -2,17 +2,52 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { requirePermission } from "@/lib/authorize";
 import { prisma } from "@/lib/prisma";
+import { ItemService, MasterDataError } from "@/modules/master-data/application/item-service";
 
-export async function GET() {
+const items = new ItemService(prisma);
+
+function errorResponse(error: unknown) {
+  if (error instanceof SyntaxError) {
+    return NextResponse.json({ error: { code: "INVALID_INPUT", message: "Request body must be valid JSON" } }, { status: 400 });
+  }
+  if (error instanceof MasterDataError) {
+    const status = error.code === "INVALID_INPUT" ? 400 : error.code === "NOT_FOUND" ? 404 : 409;
+    return NextResponse.json({ error: { code: error.code, message: error.message } }, { status });
+  }
+  if (error instanceof Error && error.message === "FORBIDDEN") {
+    return NextResponse.json({ error: { code: "FORBIDDEN", message: "Permission denied" } }, { status: 403 });
+  }
+  console.error("Category API error", error);
+  return NextResponse.json({ error: { code: "INTERNAL_ERROR", message: "Request failed" } }, { status: 500 });
+}
+
+export async function GET(request: Request) {
   try {
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: { code: "UNAUTHORIZED", message: "Authentication required" } }, { status: 401 });
     await requirePermission(user.id, "item.read");
-    return NextResponse.json({ data: await prisma.itemCategory.findMany({ where: { status: "ACTIVE" }, orderBy: { code: "asc" }, select: { id: true, code: true, name: true } }) });
-  } catch {
-    return NextResponse.json({ error: { code: "INTERNAL_ERROR", message: "Request failed" } }, { status: 500 });
+    const { searchParams } = new URL(request.url);
+    const includeAll = searchParams.get("all") === "true";
+    if (includeAll) {
+      return NextResponse.json({ data: await items.listCategories(true) });
+    }
+    return NextResponse.json({ data: await items.activeCategories() });
+  } catch (error) {
+    return errorResponse(error);
   }
 }
 
+export async function POST(request: Request) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: { code: "UNAUTHORIZED", message: "Authentication required" } }, { status: 401 });
+    await requirePermission(user.id, "item.create");
+    const body = await request.json();
+    const created = await items.createCategory(user.id, body);
+    return NextResponse.json({ data: created }, { status: 201 });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
 
 export const maxDuration = 60;

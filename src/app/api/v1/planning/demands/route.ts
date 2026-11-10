@@ -3,7 +3,7 @@ import { planning, planningAccess, planningErrorResponse } from "../_shared";
 
 export async function GET(request: Request) {
   try {
-    const access = await planningAccess("production_demand.read");
+    const access = await planningAccess(["production_demand.read", "mrp.run"]);
     if ("error" in access) return access.error;
     const params = new URL(request.url).searchParams;
     return NextResponse.json(await planning.listDemands({

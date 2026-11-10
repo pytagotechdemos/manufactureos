@@ -44,6 +44,8 @@ export type ExplosionRequirement = {
   itemId: string;
   quantity: string;
   uom: string;
+  itemSku?: string;
+  itemName?: string;
 };
 
 export type BomErrorCode =

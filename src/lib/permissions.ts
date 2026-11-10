@@ -10,6 +10,7 @@ export const permissions = [
   "production_demand.create",
   "production_demand.release",
   "mrp.run",
+  "supplier.read",
   "purchase_request.read",
   "purchase_request.create",
   "purchase_request.approve",

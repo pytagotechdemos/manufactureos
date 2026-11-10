@@ -115,4 +115,31 @@ suite("Master data PostgreSQL integration", () => {
     });
     expect(audit?.actorId).toBe(actorId);
   });
+
+  it("creates category, toggles status, and writes immutable audit logs", async () => {
+    const catCode = `CAT-${randomUUID().replaceAll("-", "").slice(0, 8).toUpperCase()}`;
+    const category = await items.createCategory(actorId, {
+      code: catCode,
+      name: "Integration Test Category",
+    });
+
+    expect(category.code).toBe(catCode);
+    expect(category.status).toBe("ACTIVE");
+
+    const deactivated = await items.setCategoryStatus(actorId, category.id, "INACTIVE");
+    expect(deactivated.status).toBe("INACTIVE");
+
+    const activated = await items.setCategoryStatus(actorId, category.id, "ACTIVE");
+    expect(activated.status).toBe("ACTIVE");
+
+    const auditCreated = await prisma.auditLog.findFirst({
+      where: { entityType: "ItemCategory", entityId: category.id, action: "category.created" },
+    });
+    expect(auditCreated?.actorId).toBe(actorId);
+
+    const auditDeactivated = await prisma.auditLog.findFirst({
+      where: { entityType: "ItemCategory", entityId: category.id, action: "category.deactivated" },
+    });
+    expect(auditDeactivated?.actorId).toBe(actorId);
+  });
 });

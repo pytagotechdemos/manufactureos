@@ -95,12 +95,15 @@ export function AppShell({ user, children }: { user: SessionUser; children: Reac
                 className="flex size-8 items-center justify-center rounded-full bg-slate-900 text-[11px] font-semibold text-white md:hidden"
                 title={user.email}
               >
-                {user.name
-                  .split(/\s+/)
-                  .slice(0, 2)
-                  .map((part) => part.charAt(0))
-                  .join("")
-                  .toUpperCase()}
+                {user.name.trim()
+                  ? user.name
+                      .trim()
+                      .split(/\s+/)
+                      .slice(0, 2)
+                      .map((part) => part.charAt(0))
+                      .join("")
+                      .toUpperCase()
+                  : "U"}
               </span>
             </div>
           </header>

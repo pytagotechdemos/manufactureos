@@ -1,5 +1,6 @@
 "use client";
 
+import Decimal from "decimal.js";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/page-header";
@@ -7,10 +8,13 @@ import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/badge";
 import { Table, TableBody, TableHead, Td, Th, Tr } from "@/components/ui/table";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Field, Input, Select } from "@/components/ui/form";
+import { Field, Input, SearchInput, Select } from "@/components/ui/form";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { formatDate, formatQuantity } from "@/lib/format";
+import { Pagination } from "@/components/ui/pagination";
+import { downloadCsv } from "@/lib/csv";
+import { ManufacturingNav } from "@/components/manufacturing/manufacturing-nav";
+import { formatDateTime, formatMoney, formatQuantity, todayJakarta } from "@/lib/format";
 
 type WorkOrderRow = {
   id: string;
@@ -31,7 +35,7 @@ type WorkOrderRow = {
     item: { sku: string; name: string };
   };
   workCenter: { id: string; code: string; name: string } | null;
-  _count: { timeEntries: number };
+  timeEntries: Array<{ minutes: string }>;
 };
 
 type WorkCenter = {
@@ -57,29 +61,48 @@ export default function WorkOrdersPage() {
   const [orders, setOrders] = useState<WorkOrderRow[]>([]);
   const [workCenters, setWorkCenters] = useState<WorkCenter[]>([]);
   const [filter, setFilter] = useState<Filter>("SEMUA");
+  const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<React.ReactNode | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const [workCenterId, setWorkCenterId] = useState("");
   const [minutes, setMinutes] = useState("");
   const [completedQty, setCompletedQty] = useState("");
   const [rejectedQty, setRejectedQty] = useState("0");
 
+  const [wcModalOpen, setWcModalOpen] = useState(false);
+  const [wcCode, setWcCode] = useState("");
+  const [wcName, setWcName] = useState("");
+  const [wcHourlyRate, setWcHourlyRate] = useState("0");
+  const [wcStandardMinutes, setWcStandardMinutes] = useState("0");
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [woRes, wcRes] = await Promise.all([
-        fetch("/api/v1/manufacturing/work-orders?limit=100"),
+      const [firstWorkOrders, workCenterResponse] = await Promise.all([
+        fetch("/api/v1/manufacturing/work-orders?limit=100&offset=0"),
         fetch("/api/v1/manufacturing/work-centers"),
       ]);
-      if (!woRes.ok || !wcRes.ok) throw new Error("Gagal memuat pesanan kerja");
-      const [woJson, wcJson] = await Promise.all([woRes.json(), wcRes.json()]);
-      setOrders(woJson.data ?? []);
-      setWorkCenters(wcJson.data ?? []);
+      if (!firstWorkOrders.ok || !workCenterResponse.ok) throw new Error("Gagal memuat pesanan kerja");
+      const [firstPage, workCenterJson] = await Promise.all([firstWorkOrders.json(), workCenterResponse.json()]);
+      const total = Number(firstPage.page?.total ?? firstPage.data?.length ?? 0);
+      const offsets = Array.from({ length: Math.max(0, Math.ceil(total / 100) - 1) }, (_, index) => (index + 1) * 100);
+      const pages: Array<{ data?: WorkOrderRow[] }> = [];
+      for (let index = 0; index < offsets.length; index += 10) {
+        pages.push(...await Promise.all(offsets.slice(index, index + 10).map(async (offset) => {
+          const response = await fetch(`/api/v1/manufacturing/work-orders?limit=100&offset=${offset}`);
+          if (!response.ok) throw new Error("Gagal memuat seluruh pesanan kerja");
+          return response.json();
+        })));
+      }
+      setOrders([...(firstPage.data ?? []), ...pages.flatMap((page) => page.data ?? [])]);
+      setWorkCenters(workCenterJson.data ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memuat pesanan kerja");
     } finally {
@@ -91,22 +114,94 @@ export default function WorkOrdersPage() {
     load();
   }, [load]);
 
-  const filtered = useMemo(
-    () => (filter === "SEMUA" ? orders : orders.filter((order) => order.status === filter)),
-    [orders, filter],
-  );
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const moParam = params.get("mo");
+      const qParam = params.get("q");
+      if (moParam) setSearch(moParam);
+      else if (qParam) setSearch(qParam);
+    }
+  }, []);
+
+  const filtered = useMemo(() => {
+    let result = filter === "SEMUA" ? orders : orders.filter((order) => order.status === filter);
+    const q = search.trim().toLowerCase();
+    if (q) {
+      result = result.filter(
+        (order) =>
+          order.number.toLowerCase().includes(q) ||
+          order.manufacturingOrder.number.toLowerCase().includes(q) ||
+          order.operationCode.toLowerCase().includes(q) ||
+          (order.workCenter?.name ?? "").toLowerCase().includes(q) ||
+          (order.workCenter?.code ?? "").toLowerCase().includes(q) ||
+          (order.manufacturingOrder.item?.sku ?? "").toLowerCase().includes(q) ||
+          (order.manufacturingOrder.item?.name ?? "").toLowerCase().includes(q),
+      );
+    }
+    return result;
+  }, [orders, filter, search]);
+
+  const paginatedOrders = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, page, pageSize]);
+
+  function exportOrdersCsv() {
+    if (filtered.length === 0) return;
+    const headers = [
+      "Nomor WO",
+      "Nomor MO",
+      "SKU Barang",
+      "Nama Barang",
+      "Operasi",
+      "Work Center",
+      "Status",
+      "Target",
+      "Selesai",
+      "Reject",
+      "Total Menit",
+      "Waktu Mulai",
+      "Waktu Selesai",
+    ];
+    const rows = filtered.map((order) => {
+      const totalMinutes = order.timeEntries
+        .reduce((total, entry) => total.plus(entry.minutes), new Decimal(0))
+        .toString();
+      return [
+        order.number,
+        order.manufacturingOrder.number,
+        order.manufacturingOrder.item?.sku ?? "",
+        order.manufacturingOrder.item?.name ?? "",
+        order.operationCode,
+        order.workCenter?.code ?? "",
+        order.status,
+        order.targetQuantity,
+        order.completedQty,
+        order.rejectedQty,
+        totalMinutes,
+        order.startedAt ? formatDateTime(order.startedAt) : "",
+        order.completedAt ? formatDateTime(order.completedAt) : "",
+      ];
+    });
+    downloadCsv(`daftar-work-orders-${todayJakarta()}.csv`, headers, rows);
+  }
 
   const selectedOrder = orders.find((order) => order.id === selectedId) ?? null;
+  const remainingTarget = selectedOrder
+    ? Decimal.max(0, new Decimal(selectedOrder.targetQuantity).minus(selectedOrder.completedQty).minus(selectedOrder.rejectedQty))
+    : new Decimal(0);
 
   function selectOrder(order: WorkOrderRow) {
     setSelectedId(order.id);
     setWorkCenterId(order.workCenter?.id ?? "");
     setMinutes("");
-    setCompletedQty(order.completedQty === "0" ? order.targetQuantity : "");
+    const rem = Decimal.max(0, new Decimal(order.targetQuantity).minus(order.completedQty).minus(order.rejectedQty));
+    setCompletedQty(rem.isPositive() ? rem.toString() : "");
     setRejectedQty("0");
   }
 
-  async function postAction(endpoint: string, body?: unknown, successMessage?: string) {
+  async function postAction(endpoint: string, body?: unknown, successMessage?: React.ReactNode) {
     setSaving(true);
     setError(null);
     try {
@@ -168,41 +263,75 @@ export default function WorkOrdersPage() {
   async function handleComplete(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selectedOrder) return;
+    const comp = new Decimal(completedQty || "0");
+    const rej = new Decimal(rejectedQty || "0");
+    if (comp.plus(rej).greaterThan(remainingTarget)) {
+      setError(`Kuantitas selesai (${comp.toString()}) + reject (${rej.toString()}) melebihi sisa target (${remainingTarget.toString()}).`);
+      return;
+    }
+    const moNum = selectedOrder.manufacturingOrder.number;
     await postAction(
       `/api/v1/manufacturing/work-orders/${selectedOrder.id}/complete`,
       { completedQty, rejectedQty: rejectedQty || "0" },
-      `${selectedOrder.number} diselesaikan.`,
+      <span>
+        {selectedOrder.number} diselesaikan.{" "}
+        <Link
+          href={`/quality?mo=${moNum}`}
+          className="ml-1 font-semibold underline underline-offset-2 hover:text-emerald-950"
+        >
+          Lanjut ke QC ({moNum}) &rarr;
+        </Link>
+      </span>,
     );
     setCompletedQty("");
     setRejectedQty("0");
+  }
+
+  async function handleCreateWorkCenter(event: React.FormEvent) {
+    event.preventDefault();
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/v1/manufacturing/work-centers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: wcCode.trim(),
+          name: wcName.trim(),
+          hourlyRate: wcHourlyRate.trim() || "0",
+          standardMinutes: wcStandardMinutes.trim() || "0",
+        }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal membuat work center");
+      setNotice(`Work center ${wcCode.trim()} berhasil dibuat.`);
+      setWcModalOpen(false);
+      setWcCode("");
+      setWcName("");
+      setWcHourlyRate("0");
+      setWcStandardMinutes("0");
+      await load();
+      if (json.data?.id) {
+        setWorkCenterId(json.data.id);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal membuat work center");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
     <div className="space-y-5">
       <PageHeader
         eyebrow="Operasi"
-        title="Eksekusi pesanan kerja"
+        title="Eksekusi Perintah Kerja (Work Orders)"
         description="Tetapkan work center, mulai/jeda pekerjaan, catat waktu aktual, dan selesaikan output."
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Link
-              className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3.5 text-sm font-medium text-slate-700 shadow-xs transition-colors hover:bg-slate-50 hover:text-slate-900"
-              href="/manufacturing"
-            >
-              Pesanan produksi
-            </Link>
-            <Link
-              className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3.5 text-sm font-medium text-slate-700 shadow-xs transition-colors hover:bg-slate-50 hover:text-slate-900"
-              href="/manufacturing/materials"
-            >
-              Material
-            </Link>
-            <Link
-              className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3.5 text-sm font-medium text-slate-700 shadow-xs transition-colors hover:bg-slate-50 hover:text-slate-900"
-              href="/manufacturing/receipts"
-            >
-              Terima produksi
-            </Link>
+            <Button variant="secondary" onClick={() => setWcModalOpen(true)}>
+              + Work Center
+            </Button>
             <Button variant="secondary" onClick={() => { void load(); }} loading={loading}>
               Muat ulang
             </Button>
@@ -210,15 +339,88 @@ export default function WorkOrdersPage() {
         }
       />
 
+      <ManufacturingNav />
+
       {error ? <Alert tone="danger" onClose={() => setError(null)}>{error}</Alert> : null}
       {notice ? <Alert tone="success" onClose={() => setNotice(null)}>{notice}</Alert> : null}
+
+      {wcModalOpen ? (
+        <Card>
+          <CardHeader
+            title="Tambah Work Center"
+            description="Definisikan stasiun kerja, tarif tenaga kerja per jam, dan standar menit operasi."
+          />
+          <CardBody>
+            <form className="space-y-4" onSubmit={handleCreateWorkCenter}>
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <Field label="Kode work center" required>
+                  <Input
+                    placeholder="WC-ASSEMBLY-02"
+                    required
+                    value={wcCode}
+                    onChange={(e) => setWcCode(e.target.value)}
+                  />
+                </Field>
+                <Field label="Nama work center" required>
+                  <Input
+                    placeholder="Stasiun Perakitan 2"
+                    required
+                    value={wcName}
+                    onChange={(e) => setWcName(e.target.value)}
+                  />
+                </Field>
+                <Field label="Tarif per jam (Rp)" required hint="Dalam Rupiah">
+                  <Input
+                    type="number"
+                    min="0"
+                    step="1"
+                    required
+                    value={wcHourlyRate}
+                    onChange={(e) => setWcHourlyRate(e.target.value)}
+                  />
+                </Field>
+                <Field label="Standar menit" required hint="Estimasi waktu operasi">
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    required
+                    value={wcStandardMinutes}
+                    onChange={(e) => setWcStandardMinutes(e.target.value)}
+                  />
+                </Field>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button type="submit" variant="primary" loading={saving} disabled={!wcCode || !wcName}>
+                  {saving ? "Menyimpan…" : "Simpan Work Center"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    setWcModalOpen(false);
+                    setWcCode("");
+                    setWcName("");
+                  }}
+                  disabled={saving}
+                >
+                  Batal
+                </Button>
+              </div>
+            </form>
+          </CardBody>
+        </Card>
+      ) : null}
 
       <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-2">
         {filters.map((entry) => (
           <button
             key={entry}
             type="button"
-            onClick={() => setFilter(entry)}
+            onClick={() => {
+              setFilter(entry);
+              setPage(1);
+            }}
             className={`rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors ${
               filter === entry
                 ? "bg-brand-600 text-white shadow-xs"
@@ -232,52 +434,88 @@ export default function WorkOrdersPage() {
 
       <div className="grid gap-5 xl:grid-cols-3">
         <Card className="xl:col-span-2">
-          <CardHeader title="Pesanan kerja" description={`${filtered.length} pesanan ditampilkan.`} />
+          <CardHeader
+            title="Pesanan kerja"
+            description={`${filtered.length} pesanan ditampilkan.`}
+            actions={
+              <div className="flex flex-wrap items-center gap-2">
+                <SearchInput
+                  value={search}
+                  onChange={(val) => {
+                    setSearch(val);
+                    setPage(1);
+                  }}
+                  placeholder="Cari nomor WO, MO, atau operasi…"
+                />
+                {filtered.length > 0 ? (
+                  <Button variant="secondary" size="sm" onClick={exportOrdersCsv}>
+                    Ekspor CSV
+                  </Button>
+                ) : null}
+              </div>
+            }
+          />
           <CardBody className="p-0">
             {loading ? (
               <div className="p-8 text-center text-slate-500">Memuat pesanan kerja…</div>
             ) : filtered.length === 0 ? (
               <EmptyState
                 title="Belum ada pesanan kerja"
-                description="Rilis pesanan produksi terlebih dahulu di halaman Produksi."
+                description={
+                  search || filter !== "SEMUA"
+                    ? "Tidak ada pesanan kerja cocok dengan kriteria filter."
+                    : "Rilis pesanan produksi terlebih dahulu di halaman Produksi."
+                }
               />
             ) : (
-              <Table>
-                <TableHead>
-                  <Tr>
-                    <Th>Nomor</Th>
-                    <Th>MO</Th>
-                    <Th>Operasi</Th>
-                    <Th>Work center</Th>
-                    <Th>Status</Th>
-                    <Th align="right">Target</Th>
-                    <Th align="right">Selesai</Th>
-                    <Th align="right">Reject</Th>
-                    <Th align="right">Menit</Th>
-                    <Th align="right">Aksi</Th>
-                  </Tr>
-                </TableHead>
-                <TableBody>
-                  {filtered.map((order) => (
-                    <Tr key={order.id} className={selectedId === order.id ? "bg-brand-50/60" : undefined}>
-                      <Td className="tnum font-medium">{order.number}</Td>
-                      <Td className="tnum text-slate-600">{order.manufacturingOrder.number}</Td>
-                      <Td className="text-slate-600">{order.operationCode}</Td>
-                      <Td className="tnum text-slate-600">{order.workCenter?.code ?? "—"}</Td>
-                      <Td>{<StatusBadge status={order.status} />}</Td>
-                      <Td align="right" className="tnum text-slate-600">{formatQuantity(order.targetQuantity)}</Td>
-                      <Td align="right" className="tnum text-slate-600">{formatQuantity(order.completedQty)}</Td>
-                      <Td align="right" className="tnum text-slate-600">{formatQuantity(order.rejectedQty)}</Td>
-                      <Td align="right" className="tnum text-slate-600">{order._count.timeEntries}</Td>
-                      <Td align="right">
-                        <Button variant="secondary" size="sm" onClick={() => selectOrder(order)}>
-                          Kelola
-                        </Button>
-                      </Td>
+              <>
+                <Table>
+                  <TableHead>
+                    <Tr>
+                      <Th>Nomor</Th>
+                      <Th>MO</Th>
+                      <Th>Operasi</Th>
+                      <Th>Work center</Th>
+                      <Th>Status</Th>
+                      <Th align="right">Target</Th>
+                      <Th align="right">Selesai</Th>
+                      <Th align="right">Reject</Th>
+                      <Th align="right">Menit</Th>
+                      <Th align="right">Aksi</Th>
                     </Tr>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHead>
+                  <TableBody>
+                    {paginatedOrders.map((order) => (
+                      <Tr key={order.id} className={selectedId === order.id ? "bg-brand-50/60" : undefined}>
+                        <Td className="tnum font-medium">{order.number}</Td>
+                        <Td className="tnum text-slate-600">{order.manufacturingOrder.number}</Td>
+                        <Td className="text-slate-600">{order.operationCode}</Td>
+                        <Td className="tnum text-slate-600">{order.workCenter?.code ?? "—"}</Td>
+                        <Td>{<StatusBadge status={order.status} />}</Td>
+                        <Td align="right" className="tnum text-slate-600">{formatQuantity(order.targetQuantity)}</Td>
+                        <Td align="right" className="tnum text-slate-600">{formatQuantity(order.completedQty)}</Td>
+                        <Td align="right" className="tnum text-slate-600">{formatQuantity(order.rejectedQty)}</Td>
+                        <Td align="right" className="tnum text-slate-600">{formatQuantity(order.timeEntries.reduce((total, entry) => total.plus(entry.minutes), new Decimal(0)).toString())}</Td>
+                        <Td align="right">
+                          <Button variant="secondary" size="sm" onClick={() => selectOrder(order)}>
+                            Kelola
+                          </Button>
+                        </Td>
+                      </Tr>
+                    ))}
+                  </TableBody>
+                </Table>
+                <Pagination
+                  currentPage={page}
+                  totalItems={filtered.length}
+                  pageSize={pageSize}
+                  onPageChange={setPage}
+                  onPageSizeChange={(newSize) => {
+                    setPageSize(newSize);
+                    setPage(1);
+                  }}
+                />
+              </>
             )}
           </CardBody>
         </Card>
@@ -311,29 +549,34 @@ export default function WorkOrdersPage() {
                   </div>
                   <div>
                     <dt className="text-slate-500">Mulai</dt>
-                    <dd className="tnum text-slate-800">{formatDate(selectedOrder.startedAt)}</dd>
+                    <dd className="tnum text-slate-800">{formatDateTime(selectedOrder.startedAt)}</dd>
                   </div>
                   <div>
                     <dt className="text-slate-500">Selesai</dt>
-                    <dd className="tnum text-slate-800">{formatDate(selectedOrder.completedAt)}</dd>
+                    <dd className="tnum text-slate-800">{formatDateTime(selectedOrder.completedAt)}</dd>
                   </div>
                 </dl>
 
-                {selectedOrder.status === "PENDING" ? (
+                {selectedOrder.status === "PENDING" || (selectedOrder.status === "IN_PROGRESS" && !selectedOrder.workCenter) ? (
                   <div className="space-y-3 rounded-md border border-slate-200 bg-slate-50/60 p-3">
                     <Field label="Work center" required hint="Wajib untuk mencatat waktu dan biaya tenaga kerja.">
                       <Select value={workCenterId} onChange={(event) => setWorkCenterId(event.target.value)}>
                         <option value="">Pilih work center</option>
                         {workCenters.map((center) => (
                           <option key={center.id} value={center.id}>
-                            {center.code} — {center.name}
+                            {center.code} — {center.name} ({formatMoney(center.hourlyRate)}/jam)
                           </option>
                         ))}
                       </Select>
                     </Field>
-                    <Button variant="secondary" size="sm" onClick={() => { void handleAssignWorkCenter(); }} loading={saving} disabled={!workCenterId}>
-                      Tetapkan work center
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button variant="secondary" size="sm" onClick={() => { void handleAssignWorkCenter(); }} loading={saving} disabled={!workCenterId}>
+                        Tetapkan work center
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => setWcModalOpen(true)}>
+                        + Buat Work Center Baru
+                      </Button>
+                    </div>
                   </div>
                 ) : null}
 
@@ -353,27 +596,34 @@ export default function WorkOrdersPage() {
                 {selectedOrder.status === "IN_PROGRESS" ? (
                   <>
                     <form className="space-y-3 border-t border-slate-200 pt-4" onSubmit={handleRecordTime}>
-                      <Field label="Catat waktu (menit)" required>
+                      <Field label="Catat waktu (menit)" required hint={!selectedOrder.workCenter ? "Wajib menetapkan work center terlebih dahulu." : undefined}>
                         <Input
                           type="number"
                           min="0.0001"
                           step="0.0001"
                           required
+                          disabled={!selectedOrder.workCenter}
                           value={minutes}
                           onChange={(event) => setMinutes(event.target.value)}
                         />
                       </Field>
-                      <Button type="submit" variant="secondary" size="sm" loading={saving}>
+                      {!selectedOrder.workCenter ? (
+                        <p className="text-xs text-amber-700">
+                          Work center belum ditetapkan. Tetapkan work center terlebih dahulu agar tarif tenaga kerja tercatat pada akuntansi biaya.
+                        </p>
+                      ) : null}
+                      <Button type="submit" variant="secondary" size="sm" loading={saving} disabled={!selectedOrder.workCenter || !minutes}>
                         Simpan entri waktu
                       </Button>
                     </form>
 
                     <form className="space-y-3 border-t border-slate-200 pt-4" onSubmit={handleComplete}>
-                      <Field label="Kuantitas selesai" required hint={`Sisa target ${formatQuantity(selectedOrder.targetQuantity)} dikurangi output tercatat.`}>
+                      <Field label="Kuantitas selesai" required hint={`Sisa target: ${formatQuantity(remainingTarget.toString())}. Total selesai + reject tidak boleh melebihi sisa target.`}>
                         <Input
                           type="number"
                           min="0.000001"
                           step="0.000001"
+                          max={remainingTarget.toString()}
                           required
                           value={completedQty}
                           onChange={(event) => setCompletedQty(event.target.value)}
@@ -384,6 +634,7 @@ export default function WorkOrdersPage() {
                           type="number"
                           min="0"
                           step="0.000001"
+                          max={remainingTarget.toString()}
                           value={rejectedQty}
                           onChange={(event) => setRejectedQty(event.target.value)}
                         />

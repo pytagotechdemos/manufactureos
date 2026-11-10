@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 const highlights = [
   ["Workspace tertutup", "Akun disediakan oleh administrator Anda — tidak ada pendaftaran publik."],
-  ["Teracak dengan baik", "Setiap pencatternya divalidasi, transaksional, dan ditulis ke jejak audit."],
+  ["Teracak dengan baik", "Setiap pencatatannya divalidasi, transaksional, dan ditulis ke jejak audit."],
   ["Satu alur, dari ujung ke ujung", "Permintaan → MRP → pembelian → produksi → kualitas → biaya."],
 ] as const;
 
@@ -48,7 +48,7 @@ export default function LoginPage() {
           </dl>
         </div>
 
-        <p className="relative text-[12px] text-slate-300/80">Manufaktur diskrit · Asia/Jakarta</p>
+        <p className="relative text-[12px] text-slate-300/80">Manufaktur diskret · Asia/Jakarta</p>
       </section>
 
       <section className="flex flex-1 items-center justify-center px-4 py-12">

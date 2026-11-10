@@ -3,7 +3,12 @@ import { planning, planningAccess, planningErrorResponse } from "../../_shared";
 
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const access = await planningAccess("mrp.run");
+    const access = await planningAccess([
+      "mrp.run",
+      "production_demand.read",
+      "manufacturing_order.create",
+      "manufacturing_order.read",
+    ]);
     if ("error" in access) return access.error;
     const { id } = await context.params;
     return NextResponse.json({ data: await planning.getMrpRun(id) });

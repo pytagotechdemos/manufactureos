@@ -14,6 +14,7 @@ export async function inventoryAccess(permission: "inventory.read" | "inventory.
 }
 
 export function inventoryErrorResponse(error: unknown) {
+  if (error instanceof SyntaxError) return NextResponse.json({ error: { code: "INVALID_INPUT", message: "Request body must be valid JSON" } }, { status: 400 });
   if (error instanceof InventoryError) {
     const status = error.code === "INVALID_INPUT" ? 400 : error.code === "NOT_FOUND" ? 404 : error.code === "INSUFFICIENT_STOCK" ? 422 : 409;
     return NextResponse.json({ error: { code: error.code, message: error.message } }, { status });

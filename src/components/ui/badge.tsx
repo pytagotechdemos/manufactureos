@@ -41,7 +41,7 @@ export function StatusDot({ tone = "neutral" }: { tone?: Tone }) {
 export function statusTone(status: string | null | undefined): Tone {
   const value = (status ?? "").toUpperCase();
 
-  if (["APPROVED", "ACTIVE", "POSTED", "COMPLETED", "ACCEPTED", "CLOSED", "AVAILABLE", "RELEASED", "PASS", "PASSED"].includes(value)) {
+  if (["APPROVED", "ACTIVE", "POSTED", "COMPLETED", "ACCEPTED", "CLOSED", "AVAILABLE", "RELEASED", "PASS", "PASSED", "CONSUMED", "FULLY_RECEIVED"].includes(value)) {
     return "success";
   }
   if (["IN_REVIEW", "PENDING", "SENT", "SUBMITTED", "INVITED", "QC_PENDING", "INSPECTION", "AWAITING_QC", "REWORK"].includes(value)) {
@@ -89,12 +89,14 @@ export function humanize(value: string | null | undefined): string {
     STARTED: "Dimulai",
     PARTIAL: "Sebagian",
     PARTIALLY_RECEIVED: "Sebagian diterima",
+    FULLY_RECEIVED: "Diterima penuh",
     OPEN: "Terbuka",
     NEW: "Baru",
     IDLE: "Tidak aktif",
     PAUSED: "Dijeda",
     READY: "Siap",
     RESERVED: "Dipesan",
+    CONSUMED: "Terpakai",
     QC_PENDING: "Menunggu QC",
     INSPECTION: "Pemeriksaan",
     REWORK: "Rework",

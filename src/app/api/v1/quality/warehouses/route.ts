@@ -3,7 +3,7 @@ import { quality, qualityAccess, qualityErrorResponse } from "../_shared";
 
 export async function GET() {
   try {
-    const access = await qualityAccess("inventory.read");
+    const access = await qualityAccess(["qc.inspect", "inventory.receive", "inventory.read"]);
     if ("error" in access) return access.error;
     return NextResponse.json({ data: await quality.finishedGoodsWarehouses() });
   } catch (error) { return qualityErrorResponse(error); }

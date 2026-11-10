@@ -173,6 +173,18 @@ suite("Manufacturing order PostgreSQL integration", () => {
       idempotencyKey: `fg-over-${randomUUID()}`,
     })).rejects.toMatchObject({ code: "INSUFFICIENT_OUTPUT" });
 
+    const reworkInspection = await quality.createInspection(actorId, {
+      number: `QC-REW-${randomUUID().slice(0, 8)}`,
+      manufacturingOrderId: order.id,
+      inspectedQty: "1",
+      acceptedQty: "0",
+      rejectedQty: "1",
+      reworkQty: "0",
+      defectCode: "SCRAP",
+      notes: "[REWORK] Final scrap disposition",
+    });
+    await quality.postInspection(actorId, reworkInspection.id);
+
     const estimate = await costing.createEstimate(actorId, order.id);
     expect(estimate.materialCost.toString()).toBe("35");
     expect(estimate.laborCost.toString()).toBe("15");

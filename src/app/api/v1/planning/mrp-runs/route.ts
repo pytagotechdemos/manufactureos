@@ -5,7 +5,12 @@ export const maxDuration = 60;
 
 export async function GET() {
   try {
-    const access = await planningAccess("mrp.run");
+    const access = await planningAccess([
+      "mrp.run",
+      "production_demand.read",
+      "manufacturing_order.create",
+      "manufacturing_order.read",
+    ]);
     if ("error" in access) return access.error;
     return NextResponse.json({ data: await planning.listMrpRuns() });
   } catch (error) { return planningErrorResponse(error); }

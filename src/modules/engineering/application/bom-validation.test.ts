@@ -29,8 +29,18 @@ describe("BOM draft validation", () => {
 
   it("rejects negative scrap and invalid decimal syntax", () => {
     const negativeScrap = { ...validDraft, lines: [{ ...validDraft.lines[0], scrapRate: "-0.01" }] };
+    const excessiveScrap = { ...validDraft, lines: [{ ...validDraft.lines[0], scrapRate: "1" }] };
     const exponential = { ...validDraft, outputQuantity: "1e3" };
     expect(bomDraftSchema.safeParse(negativeScrap).success).toBe(false);
+    expect(bomDraftSchema.safeParse(excessiveScrap).success).toBe(false);
     expect(bomDraftSchema.safeParse(exponential).success).toBe(false);
+  });
+
+  it("rejects output item used as its own component line", () => {
+    const selfReferencing = {
+      ...validDraft,
+      lines: [{ ...validDraft.lines[0], componentItemId: validDraft.outputItemId }],
+    };
+    expect(bomDraftSchema.safeParse(selfReferencing).success).toBe(false);
   });
 });

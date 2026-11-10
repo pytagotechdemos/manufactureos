@@ -4,7 +4,7 @@ import { requireCurrentUser } from "@/lib/auth-session";
 import { userHasPermission } from "@/lib/authorize";
 
 export const metadata: Metadata = {
-  title: "BOM Explorer | ManufactureOS",
+  title: "Eksplorasi BOM",
 };
 
 export default async function EngineeringPage() {

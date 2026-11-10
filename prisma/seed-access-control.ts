@@ -11,12 +11,29 @@ const roleDefinitions = [
   {
     code: "PRODUCTION_PLANNER",
     name: "Production Planner",
-    permissions: ["item.read", "bom.read", "production_demand.read", "production_demand.create", "production_demand.release", "mrp.run", "manufacturing_order.read", "manufacturing_order.create", "manufacturing_order.plan", "manufacturing_order.release", "work_order.assign", "reports.read"],
+    permissions: [
+      "item.read",
+      "bom.read",
+      "production_demand.read",
+      "production_demand.create",
+      "production_demand.release",
+      "mrp.run",
+      "manufacturing_order.read",
+      "manufacturing_order.create",
+      "manufacturing_order.plan",
+      "manufacturing_order.release",
+      "inventory.reserve",
+      "work_order.assign",
+      "supplier.read",
+      "purchase_request.read",
+      "purchase_request.create",
+      "reports.read",
+    ],
   },
   {
     code: "PURCHASING",
     name: "Purchasing",
-    permissions: ["item.read", "purchase_request.read", "purchase_request.create", "purchase_request.approve", "purchase_order.read", "purchase_order.create", "purchase_order.approve", "inventory.receive", "reports.read"],
+    permissions: ["item.read", "supplier.read", "purchase_request.read", "purchase_request.create", "purchase_request.approve", "purchase_order.read", "purchase_order.create", "purchase_order.approve", "inventory.receive", "reports.read"],
   },
   {
     code: "WAREHOUSE",
@@ -26,9 +43,13 @@ const roleDefinitions = [
   {
     code: "PRODUCTION_OPERATOR",
     name: "Production Operator",
-    permissions: ["work_order.read", "work_order.execute", "inventory.issue"],
+    permissions: ["item.read", "work_order.read", "work_order.execute", "inventory.issue"],
   },
-  { code: "QC_INSPECTOR", name: "QC Inspector", permissions: ["qc.inspect"] },
+  {
+    code: "QC_INSPECTOR",
+    name: "QC Inspector",
+    permissions: ["item.read", "qc.inspect", "inventory.receive", "manufacturing_order.read"],
+  },
   { code: "MANAGEMENT", name: "Management", permissions: ["costing.read", "reports.read"] },
 ] as const;
 
@@ -52,12 +73,15 @@ export async function seedAccessControl(prisma: PrismaClient) {
         create: { code: definition.code, name: definition.name },
       });
 
-      for (const permissionCode of definition.permissions) {
+      const permissionIdsForRole = definition.permissions.map((permissionCode) => {
         const permissionId = permissionIds.get(permissionCode);
-        if (!permissionId) {
-          throw new Error(`Unknown permission code: ${permissionCode}`);
-        }
-
+        if (!permissionId) throw new Error(`Unknown permission code: ${permissionCode}`);
+        return permissionId;
+      });
+      await transaction.rolePermission.deleteMany({
+        where: { roleId: role.id, permissionId: { notIn: permissionIdsForRole } },
+      });
+      for (const permissionId of permissionIdsForRole) {
         await transaction.rolePermission.upsert({
           where: { roleId_permissionId: { roleId: role.id, permissionId } },
           update: {},

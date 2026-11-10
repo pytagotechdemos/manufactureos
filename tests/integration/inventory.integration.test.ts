@@ -123,9 +123,11 @@ suite("Inventory PostgreSQL integration", () => {
     expect(unvaluedReceipt.costStatus).toBe("UNVALUED");
     balance = await prisma.stockBalance.findUniqueOrThrow({ where: { itemId_warehouseId: { itemId: valuedItemId, warehouseId } } });
     expect(balance.valuationComplete).toBe(false);
-    expect(balance.averageUnitCost).toBeNull();
+    expect(balance.averageUnitCost?.toString()).toBe("3");
     const unvaluedIssue = await inventory.issue(actorId, { itemId: valuedItemId, warehouseId, quantity: "1", sourceType: "TEST_ISSUE", sourceId: randomUUID(), idempotencyKey: `wac-unvalued-${randomUUID()}` });
     expect(unvaluedIssue.costStatus).toBe("UNVALUED");
     expect(unvaluedIssue.unitCost).toBeNull();
+    balance = await prisma.stockBalance.findUniqueOrThrow({ where: { itemId_warehouseId: { itemId: valuedItemId, warehouseId } } });
+    expect(balance.averageUnitCost).toBeNull();
   });
 });

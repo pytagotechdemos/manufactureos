@@ -23,4 +23,15 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   }
 }
 
+export async function DELETE(_request: Request, context: { params: Promise<{ id: string }> }) {
+  try {
+    const access = await authenticatedUser("bom.create");
+    if ("error" in access) return access.error;
+    const { id } = await context.params;
+    return NextResponse.json({ data: await boms.deleteDraft(access.user.id, id) });
+  } catch (error) {
+    return bomErrorResponse(error);
+  }
+}
+
 export const maxDuration = 60;

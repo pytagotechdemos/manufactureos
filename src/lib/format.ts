@@ -86,3 +86,9 @@ export function truncateId(value: string | null | undefined, length = 8): string
   if (!value) return "—";
   return value.length > length ? `${value.slice(0, length)}…` : value;
 }
+
+/** Current calendar date formatted as YYYY-MM-DD in Asia/Jakarta timezone. */
+export function todayJakarta(): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });
+}
+

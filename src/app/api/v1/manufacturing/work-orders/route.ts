@@ -9,8 +9,9 @@ export async function GET(request: Request) {
     const data = await workOrders.list({
       ...(params.has("status") ? { status: params.get("status") } : {}),
       ...(params.has("limit") ? { limit: params.get("limit") } : {}),
+      ...(params.has("offset") ? { offset: params.get("offset") } : {}),
     });
-    return NextResponse.json({ data });
+    return NextResponse.json(data);
   } catch (error) { return workOrderErrorResponse(error); }
 }
 

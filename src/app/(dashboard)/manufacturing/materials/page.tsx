@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import Decimal from "decimal.js";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/badge";
@@ -10,6 +11,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Field, Input, Select } from "@/components/ui/form";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { downloadCsv } from "@/lib/csv";
+import { ManufacturingNav } from "@/components/manufacturing/manufacturing-nav";
 import { formatDate, formatQuantity } from "@/lib/format";
 
 type MoSummary = {
@@ -48,23 +51,17 @@ type MoDetail = {
 
 const ACTIVE_STATUSES = ["RELEASED", "IN_PROGRESS", "QC_PENDING"];
 
-function toNumber(value: string): number {
-  return Number(value);
+function remainingIssue(material: MoMaterial): Decimal {
+  const diff = new Decimal(material.plannedQty).minus(material.issuedQty);
+  return diff.isPositive() ? diff : new Decimal(0);
 }
 
-function remainingIssue(material: MoMaterial): number {
-  return Math.max(toNumber(material.plannedQty) - toNumber(material.issuedQty), 0);
+function remainingWip(material: MoMaterial): Decimal {
+  const diff = new Decimal(material.issuedQty)
+    .minus(material.consumedQty)
+    .minus(material.returnedQty);
+  return diff.isPositive() ? diff : new Decimal(0);
 }
-
-function remainingWip(material: MoMaterial): number {
-  return Math.max(
-    toNumber(material.issuedQty) - toNumber(material.consumedQty) - toNumber(material.returnedQty),
-    0,
-  );
-}
-
-const linkClasses =
-  "inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3.5 text-sm font-medium text-slate-700 shadow-xs transition-colors hover:bg-slate-50 hover:text-slate-900";
 
 export default function MaterialsPage() {
   const [orders, setOrders] = useState<MoSummary[]>([]);
@@ -75,7 +72,7 @@ export default function MaterialsPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<React.ReactNode | null>(null);
 
   const [issueQty, setIssueQty] = useState("");
   const [consumeQty, setConsumeQty] = useState("");
@@ -85,12 +82,31 @@ export default function MaterialsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/v1/manufacturing/orders?limit=100");
+      const res = await fetch("/api/v1/manufacturing/orders?limit=100&offset=0");
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.error?.message ?? "Gagal memuat pesanan produksi");
-      const rows = (json.data ?? []) as MoSummary[];
+      const total = Number(json.page?.total ?? json.data?.length ?? 0);
+      const offsets = Array.from({ length: Math.max(0, Math.ceil(total / 100) - 1) }, (_, index) => (index + 1) * 100);
+      const pages: Array<{ data?: MoSummary[] }> = [];
+      for (let index = 0; index < offsets.length; index += 10) {
+        pages.push(...await Promise.all(offsets.slice(index, index + 10).map(async (offset) => {
+          const response = await fetch(`/api/v1/manufacturing/orders?limit=100&offset=${offset}`);
+          if (!response.ok) throw new Error("Gagal memuat seluruh pesanan produksi");
+          return response.json();
+        })));
+      }
+      const rows = [...(json.data ?? []), ...pages.flatMap((page) => page.data ?? [])] as MoSummary[];
       setOrders(rows);
       setSelectedMoId((current) => {
+        if (typeof window !== "undefined") {
+          const params = new URLSearchParams(window.location.search);
+          const orderIdParam = params.get("orderId");
+          const moParam = params.get("mo");
+          if (orderIdParam && rows.some((row) => row.id === orderIdParam)) return orderIdParam;
+          if (moParam && rows.some((row) => row.number.toLowerCase() === moParam.toLowerCase())) {
+            return rows.find((row) => row.number.toLowerCase() === moParam.toLowerCase())!.id;
+          }
+        }
         if (current && rows.some((row) => row.id === current)) return current;
         return rows.find((row) => ACTIVE_STATUSES.includes(row.status))?.id ?? rows[0]?.id ?? "";
       });
@@ -133,11 +149,41 @@ export default function MaterialsPage() {
   const canIssue = detail ? detail.status === "RELEASED" || detail.status === "IN_PROGRESS" : false;
   const canDispose = detail ? ACTIVE_STATUSES.includes(detail.status) : false;
 
+  function exportMaterialsCsv() {
+    if (!detail || detail.materials.length === 0) return;
+    const headers = [
+      "No",
+      "SKU Bahan",
+      "Nama Bahan",
+      "Satuan",
+      "Rencana",
+      "Terbit",
+      "Konsumsi",
+      "Kembali",
+      "Sisa WIP",
+      "Nomor MO",
+    ];
+    const rows = detail.materials.map((m) => [
+      m.sequence,
+      m.item.sku,
+      m.item.name,
+      m.uomCode,
+      m.plannedQty,
+      m.issuedQty,
+      m.consumedQty,
+      m.returnedQty,
+      remainingWip(m).toString(),
+      detail.number,
+    ]);
+    downloadCsv(`material-mo-${detail.number}.csv`, headers, rows);
+  }
+
   function selectMaterial(material: MoMaterial) {
     setSelectedMaterialId(material.id);
-    setIssueQty(remainingIssue(material) > 0 ? String(remainingIssue(material)) : "");
+    const remIssue = remainingIssue(material);
+    setIssueQty(remIssue.greaterThan(0) ? remIssue.toString() : "");
     const wip = remainingWip(material);
-    setConsumeQty(wip > 0 ? String(wip) : "");
+    setConsumeQty(wip.greaterThan(0) ? wip.toString() : "");
     setReturnQty("");
   }
 
@@ -145,7 +191,7 @@ export default function MaterialsPage() {
     materialId: string,
     action: "issue" | "consume" | "return",
     quantity: string,
-    successMessage: string,
+    successMessage: React.ReactNode,
   ) {
     if (!detail) return;
     setSaving(true);
@@ -175,23 +221,17 @@ export default function MaterialsPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Produksi"
-        title="Material pesanan produksi"
+        eyebrow="Operasi"
+        title="Material Pesanan Produksi & WIP"
         description="Terbitkan bahan dari gudang ke WIP, catat konsumsi aktual, dan kembalikan sisa material."
         actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <Link className={linkClasses} href="/manufacturing">
-              Pesanan produksi
-            </Link>
-            <Link className={linkClasses} href="/manufacturing/work-orders">
-              Pesanan kerja
-            </Link>
-            <Link className={linkClasses} href="/manufacturing/receipts">
-              Terima produksi
-            </Link>
-          </div>
+          <Button variant="secondary" onClick={() => { void loadOrders(); }} loading={loading}>
+            Muat ulang
+          </Button>
         }
       />
+
+      <ManufacturingNav />
 
       {error ? <Alert tone="danger" onClose={() => setError(null)}>{error}</Alert> : null}
       {notice ? <Alert tone="success" onClose={() => setNotice(null)}>{notice}</Alert> : null}
@@ -201,6 +241,13 @@ export default function MaterialsPage() {
           <CardHeader
             title="Bahan pesanan"
             description="Menerbitkan bahan memindahkan stok dari gudang sumber ke gudang WIP."
+            actions={
+              detail && detail.materials.length > 0 ? (
+                <Button variant="secondary" size="sm" onClick={exportMaterialsCsv}>
+                  Ekspor CSV
+                </Button>
+              ) : undefined
+            }
           />
           <CardBody className="space-y-4">
             <Field label="Pesanan produksi" required>
@@ -263,7 +310,7 @@ export default function MaterialsPage() {
                         <Td align="right" className="tnum text-slate-600">{formatQuantity(material.issuedQty)}</Td>
                         <Td align="right" className="tnum text-slate-600">{formatQuantity(material.consumedQty)}</Td>
                         <Td align="right" className="tnum text-slate-600">{formatQuantity(material.returnedQty)}</Td>
-                        <Td align="right" className="tnum font-medium text-brand-700">{formatQuantity(String(remainingWip(material)))}</Td>
+                        <Td align="right" className="tnum font-medium text-brand-700">{formatQuantity(remainingWip(material).toString())}</Td>
                         <Td align="right">
                           <Button variant="secondary" size="sm" onClick={() => selectMaterial(material)}>
                             Kelola
@@ -286,7 +333,7 @@ export default function MaterialsPage() {
             title="Kelola material"
             description={
               selectedMaterial
-                ? `${selectedMaterial.item.sku} · sisa WIP ${formatQuantity(String(remainingWip(selectedMaterial)))} ${selectedMaterial.uomCode}`
+                ? `${selectedMaterial.item.sku} · sisa WIP ${formatQuantity(remainingWip(selectedMaterial).toString())} ${selectedMaterial.uomCode}`
                 : "Pilih baris material dari tabel."
             }
           />
@@ -322,20 +369,28 @@ export default function MaterialsPage() {
                       selectedMaterial.id,
                       "issue",
                       issueQty,
-                      `Bahan ${selectedMaterial.item.sku} diterbitkan ${issueQty} ${selectedMaterial.uomCode}.`,
+                      <span>
+                        Bahan {selectedMaterial.item.sku} diterbitkan {issueQty} {selectedMaterial.uomCode}.{" "}
+                        <Link
+                          href={`/manufacturing/work-orders?mo=${detail.number}`}
+                          className="ml-1 font-semibold underline underline-offset-2 hover:text-emerald-950"
+                        >
+                          Buka Pesanan Kerja ({detail.number}) &rarr;
+                        </Link>
+                      </span>,
                     );
                   }}
                 >
                   <Field
                     label="Terbitkan bahan"
                     required
-                    hint={`Sisa yang belum diterbitkan ${formatQuantity(String(remainingIssue(selectedMaterial)))} ${selectedMaterial.uomCode}.`}
+                    hint={`Sisa yang belum diterbitkan ${formatQuantity(remainingIssue(selectedMaterial).toString())} ${selectedMaterial.uomCode}.`}
                   >
                     <Input
                       type="number"
                       min="0.000001"
                       step="0.000001"
-                      max={remainingIssue(selectedMaterial)}
+                      max={remainingIssue(selectedMaterial).toString()}
                       required
                       value={issueQty}
                       onChange={(event) => setIssueQty(event.target.value)}
@@ -346,7 +401,7 @@ export default function MaterialsPage() {
                     variant="secondary"
                     size="sm"
                     loading={saving}
-                    disabled={!canIssue || remainingIssue(selectedMaterial) <= 0}
+                    disabled={!canIssue || remainingIssue(selectedMaterial).lessThanOrEqualTo(0)}
                   >
                     Terbitkan ke WIP
                   </Button>
@@ -363,20 +418,28 @@ export default function MaterialsPage() {
                       selectedMaterial.id,
                       "consume",
                       consumeQty,
-                      `Konsumsi ${selectedMaterial.item.sku} ${consumeQty} ${selectedMaterial.uomCode} dicatat.`,
+                      <span>
+                        Konsumsi {selectedMaterial.item.sku} {consumeQty} {selectedMaterial.uomCode} dicatat.{" "}
+                        <Link
+                          href={`/reports?mo=${detail.number}`}
+                          className="ml-1 font-semibold underline underline-offset-2 hover:text-emerald-950"
+                        >
+                          Lihat Biaya Aktual ({detail.number}) &rarr;
+                        </Link>
+                      </span>,
                     );
                   }}
                 >
                   <Field
                     label="Catat konsumsi"
                     required
-                    hint={`Maksimal ${formatQuantity(String(remainingWip(selectedMaterial)))} ${selectedMaterial.uomCode}.`}
+                    hint={`Maksimal ${formatQuantity(remainingWip(selectedMaterial).toString())} ${selectedMaterial.uomCode}.`}
                   >
                     <Input
                       type="number"
                       min="0.000001"
                       step="0.000001"
-                      max={remainingWip(selectedMaterial)}
+                      max={remainingWip(selectedMaterial).toString()}
                       required
                       value={consumeQty}
                       onChange={(event) => setConsumeQty(event.target.value)}
@@ -387,7 +450,7 @@ export default function MaterialsPage() {
                     variant="primary"
                     size="sm"
                     loading={saving}
-                    disabled={!canDispose || remainingWip(selectedMaterial) <= 0}
+                    disabled={!canDispose || remainingWip(selectedMaterial).lessThanOrEqualTo(0)}
                   >
                     Simpan konsumsi
                   </Button>
@@ -408,13 +471,13 @@ export default function MaterialsPage() {
                   <Field
                     label="Kembalikan sisa"
                     required
-                    hint={`Maksimal ${formatQuantity(String(remainingWip(selectedMaterial)))} ${selectedMaterial.uomCode}.`}
+                    hint={`Maksimal ${formatQuantity(remainingWip(selectedMaterial).toString())} ${selectedMaterial.uomCode}.`}
                   >
                     <Input
                       type="number"
                       min="0.000001"
                       step="0.000001"
-                      max={remainingWip(selectedMaterial)}
+                      max={remainingWip(selectedMaterial).toString()}
                       required
                       value={returnQty}
                       onChange={(event) => setReturnQty(event.target.value)}
@@ -425,7 +488,7 @@ export default function MaterialsPage() {
                     variant="secondary"
                     size="sm"
                     loading={saving}
-                    disabled={!canDispose || remainingWip(selectedMaterial) <= 0}
+                    disabled={!canDispose || remainingWip(selectedMaterial).lessThanOrEqualTo(0)}
                   >
                     Kembalikan ke gudang
                   </Button>

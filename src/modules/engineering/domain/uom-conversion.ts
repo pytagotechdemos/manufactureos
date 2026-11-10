@@ -34,21 +34,26 @@ function conversionFactor(
   while (queue.length > 0) {
     const current = queue.shift();
     if (!current) break;
-    for (const conversion of conversions.filter((entry) => entry.from === current.code)) {
-      if (current.path.includes(conversion.to)) continue;
-      const factor = new Decimal(conversion.factor);
+    const neighbors = conversions.flatMap((conversion) => {
+      if (conversion.from === current.code) return [{ code: conversion.to, factor: conversion.factor, edge: conversion }];
+      if (conversion.to === current.code) return [{ code: conversion.from, factor: new Decimal(1).div(conversion.factor).toString(), edge: conversion }];
+      return [];
+    });
+    for (const neighbor of neighbors) {
+      if (current.path.includes(neighbor.code)) continue;
+      const factor = new Decimal(neighbor.factor);
       if (!factor.isFinite() || !factor.greaterThan(0)) {
-        throw new UomConversionError("INVALID_FACTOR", `Conversion factor from ${conversion.from} to ${conversion.to} must be positive`);
+        throw new UomConversionError("INVALID_FACTOR", `Conversion factor from ${neighbor.edge.from} to ${neighbor.edge.to} must be positive`);
       }
       const combined = current.factor.mul(factor);
-      if (conversion.to === toCode) {
+      if (neighbor.code === toCode) {
         if (found && !found.eq(combined)) {
           throw new UomConversionError("AMBIGUOUS_CONVERSION", `Multiple conversion paths exist from ${fromCode} to ${toCode}`);
         }
         found = combined;
         continue;
       }
-      queue.push({ code: conversion.to, factor: combined, path: [...current.path, conversion.to] });
+      queue.push({ code: neighbor.code, factor: combined, path: [...current.path, neighbor.code] });
     }
   }
 

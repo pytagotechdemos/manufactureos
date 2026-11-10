@@ -1,7 +1,16 @@
 import Decimal from "decimal.js";
 import { z } from "zod";
 
-const decimalString = z.string().trim().regex(/^\d+(\.\d+)?$/);
+const decimalString = z.string().trim().regex(/^\d{1,13}(\.\d{1,6})?$/);
+
+function isNonNegativeDecimal(value: string | undefined): boolean {
+  if (value === undefined) return true;
+  try {
+    return new Decimal(value).greaterThanOrEqualTo(0);
+  } catch {
+    return false;
+  }
+}
 
 export const itemCreateSchema = z.object({
   sku: z.string().trim().min(1).max(50),
@@ -19,11 +28,33 @@ export const itemCreateSchema = z.object({
   lotSizeMultiple: decimalString.default("0"),
 }).superRefine((value, context) => {
   for (const key of ["reorderPoint", "safetyStock", "minimumOrderQty", "lotSizeMultiple"] as const) {
-    if (!new Decimal(value[key]).greaterThanOrEqualTo(0)) {
+    if (!isNonNegativeDecimal(value[key])) {
       context.addIssue({ code: "custom", path: [key], message: "Value must be non-negative" });
     }
   }
-  if (value.standardMaterialCost && !new Decimal(value.standardMaterialCost).greaterThanOrEqualTo(0)) {
+  if (value.standardMaterialCost && !isNonNegativeDecimal(value.standardMaterialCost)) {
+    context.addIssue({ code: "custom", path: ["standardMaterialCost"], message: "Cost must be non-negative" });
+  }
+});
+
+export const itemUpdateSchema = z.object({
+  name: z.string().trim().min(1).max(160).optional(),
+  description: z.string().trim().max(2000).optional().nullable(),
+  categoryId: z.string().uuid().optional(),
+  standardMaterialCost: decimalString.optional().nullable(),
+  reorderPoint: decimalString.optional(),
+  safetyStock: decimalString.optional(),
+  purchasingLeadDays: z.number().int().min(0).max(3650).optional(),
+  minimumOrderQty: decimalString.optional(),
+  lotSizeMultiple: decimalString.optional(),
+  status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
+}).superRefine((value, context) => {
+  for (const key of ["reorderPoint", "safetyStock", "minimumOrderQty", "lotSizeMultiple"] as const) {
+    if (value[key] !== undefined && !isNonNegativeDecimal(value[key])) {
+      context.addIssue({ code: "custom", path: [key], message: "Value must be non-negative" });
+    }
+  }
+  if (value.standardMaterialCost && !isNonNegativeDecimal(value.standardMaterialCost)) {
     context.addIssue({ code: "custom", path: ["standardMaterialCost"], message: "Cost must be non-negative" });
   }
 });
@@ -35,4 +66,17 @@ export const itemListSchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
+export const categoryCreateSchema = z.object({
+  code: z.string().trim().min(1).max(20).toUpperCase(),
+  name: z.string().trim().min(1).max(80),
+});
+
+export const categoryUpdateSchema = z.object({
+  name: z.string().trim().min(1).max(80).optional(),
+  status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
+});
+
 export type ItemCreateInput = z.infer<typeof itemCreateSchema>;
+export type ItemUpdateInput = z.infer<typeof itemUpdateSchema>;
+export type CategoryCreateInput = z.infer<typeof categoryCreateSchema>;
+export type CategoryUpdateInput = z.infer<typeof categoryUpdateSchema>;

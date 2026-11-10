@@ -42,15 +42,25 @@ function bomInput(bom: {
   };
 }
 
-async function loadExplosionContext(transaction: Prisma.TransactionClient): Promise<{ catalog: BomCatalog; context: BomExplosionContext; snapshots: unknown[] }> {
+async function loadExplosionContext(transaction: Prisma.TransactionClient, effectiveAt: Date): Promise<{ catalog: BomCatalog; context: BomExplosionContext; snapshots: unknown[] }> {
   const [boms, items, uoms, conversions] = await Promise.all([
-    transaction.bom.findMany({ where: { status: "APPROVED" }, include: { lines: { include: { uom: { select: { code: true } }, component: { select: { supplyType: true } } } } } }),
+    transaction.bom.findMany({ where: { status: "APPROVED", effectiveDate: { lte: effectiveAt } }, orderBy: [{ outputItemId: "asc" }, { effectiveDate: "desc" }, { revision: "desc" }], include: { lines: { include: { uom: { select: { code: true } }, component: { select: { supplyType: true } } } } } }),
     transaction.item.findMany({ select: { id: true, baseUom: { select: { code: true, dimension: true, precision: true } } } }),
     transaction.unitOfMeasure.findMany({ where: { status: "ACTIVE" }, select: { code: true, dimension: true, precision: true } }),
     transaction.uomConversion.findMany({ select: { fromUom: { select: { code: true, dimension: true } }, toUom: { select: { code: true, dimension: true } }, factor: true } }),
   ]);
   const catalog = new Map<string, BomInput[]>();
-  for (const bom of boms) catalog.set(bom.outputItemId, [...(catalog.get(bom.outputItemId) ?? []), bomInput(bom)]);
+  const effectiveByItem = new Map<string, Date>();
+  for (const bom of boms) {
+    const priorEffectiveDate = effectiveByItem.get(bom.outputItemId);
+    if (priorEffectiveDate && priorEffectiveDate.getTime() === bom.effectiveDate?.getTime()) {
+      throw new ManufacturingError("MISSING_BOM", `Multiple approved BOM revisions for item ${bom.outputItemId} have the same effective date`);
+    }
+    if (!catalog.has(bom.outputItemId)) {
+      catalog.set(bom.outputItemId, [bomInput(bom)]);
+      if (bom.effectiveDate) effectiveByItem.set(bom.outputItemId, bom.effectiveDate);
+    }
+  }
   const context: BomExplosionContext = {
     itemUnits: new Map(items.map((item) => [item.id, { baseUom: item.baseUom.code, dimension: item.baseUom.dimension, precision: item.baseUom.precision }])),
     uoms: new Map(uoms.map((uom) => [uom.code, uom])),
@@ -73,48 +83,53 @@ export class ManufacturingService {
   async createFromRecommendation(actorId: string, input: unknown) {
     const parsed = manufacturingOrderCreateSchema.safeParse(input);
     if (!parsed.success) throw new ManufacturingError("INVALID_INPUT", parsed.error.message);
-    return serializable(this.prisma, async (transaction) => {
-      const [recommendation, warehouses] = await Promise.all([
-        transaction.mrpRecommendation.findUnique({ where: { id: parsed.data.recommendationId }, include: { item: true } }),
-        transaction.warehouse.findMany({ where: { id: { in: [parsed.data.warehouseId, parsed.data.wipWarehouseId] }, status: "ACTIVE" }, select: { id: true, isWip: true } }),
-      ]);
-      if (!recommendation) throw new ManufacturingError("NOT_FOUND", "MRP recommendation not found");
-      const sourceWarehouse = warehouses.find((warehouse) => warehouse.id === parsed.data.warehouseId);
-      const wipWarehouse = warehouses.find((warehouse) => warehouse.id === parsed.data.wipWarehouseId);
-      if (!sourceWarehouse || !wipWarehouse || !wipWarehouse.isWip || sourceWarehouse.id === wipWarehouse.id) throw new ManufacturingError("INVALID_INPUT", "Select an active source warehouse and a distinct active WIP warehouse");
-      if (recommendation.supplyType !== "MAKE" || recommendation.item.supplyType !== "MAKE") throw new ManufacturingError("INVALID_INPUT", "Only MAKE recommendations can create manufacturing orders");
-      const existing = await transaction.manufacturingOrder.findFirst({ where: { sourceRecommendationId: recommendation.id } });
-      if (existing) throw new ManufacturingError("CONFLICT", "An MO already exists for this recommendation");
+    try {
+      return await serializable(this.prisma, async (transaction) => {
+        const [recommendation, warehouses] = await Promise.all([
+          transaction.mrpRecommendation.findUnique({ where: { id: parsed.data.recommendationId }, include: { item: true } }),
+          transaction.warehouse.findMany({ where: { id: { in: [parsed.data.warehouseId, parsed.data.wipWarehouseId] }, status: "ACTIVE" }, select: { id: true, isWip: true } }),
+        ]);
+        if (!recommendation) throw new ManufacturingError("NOT_FOUND", "MRP recommendation not found");
+        const sourceWarehouse = warehouses.find((warehouse) => warehouse.id === parsed.data.warehouseId);
+        const wipWarehouse = warehouses.find((warehouse) => warehouse.id === parsed.data.wipWarehouseId);
+        if (!sourceWarehouse || !wipWarehouse || !wipWarehouse.isWip || sourceWarehouse.id === wipWarehouse.id) throw new ManufacturingError("INVALID_INPUT", "Select an active source warehouse and a distinct active WIP warehouse");
+        if (recommendation.supplyType !== "MAKE" || recommendation.item.supplyType !== "MAKE") throw new ManufacturingError("INVALID_INPUT", "Only MAKE recommendations can create manufacturing orders");
+        const existing = await transaction.manufacturingOrder.findFirst({ where: { sourceRecommendationId: recommendation.id, status: { not: "CANCELLED" } } });
+        if (existing) throw new ManufacturingError("CONFLICT", "An active MO already exists for this recommendation");
 
-      const { catalog, context, snapshots } = await loadExplosionContext(transaction);
-      const root = catalog.get(recommendation.itemId)?.find((bom) => {
-        const snapshot = snapshots.find((entry) => typeof entry === "object" && entry !== null && "id" in entry && entry.id === bom.bomId) as { effectiveDate: string | null } | undefined;
-        return snapshot?.effectiveDate !== null && snapshot?.effectiveDate !== undefined && new Date(snapshot.effectiveDate) <= recommendation.requiredDate;
-      });
-      if (!root) throw new ManufacturingError("MISSING_BOM", "No effective approved BOM exists for this recommendation date");
+        const { catalog, context, snapshots } = await loadExplosionContext(transaction, recommendation.requiredDate);
+        const root = catalog.get(recommendation.itemId)?.[0];
+        if (!root) throw new ManufacturingError("MISSING_BOM", "No effective approved BOM exists for this recommendation date");
 
-      const exploded = explodeBom(root, recommendation.quantity.toString(), catalog, context);
-      const order = await transaction.manufacturingOrder.create({
-        data: {
-          number: parsed.data.number,
-          itemId: recommendation.itemId,
-          quantity: recommendation.quantity,
-          warehouseId: parsed.data.warehouseId,
-          wipWarehouseId: parsed.data.wipWarehouseId,
-          sourceRecommendationId: recommendation.id,
-          bomId: root.bomId,
-          bomSnapshot: { selectedBomId: root.bomId, revisionStructures: snapshots, explosion: exploded.tree } as Prisma.InputJsonValue,
-          createdById: actorId,
-          plannedStart: recommendation.plannedReleaseDate,
-          plannedEnd: recommendation.requiredDate,
-          materials: { create: exploded.requirements.map((requirement, index) => ({ itemId: requirement.itemId, plannedQty: decimal(requirement.quantity), uomCode: requirement.uom, sequence: index + 1 })) },
-          workOrders: { create: { number: `${parsed.data.number}-001`, sequence: 1, operationCode: "ASSEMBLY", targetQuantity: recommendation.quantity } },
-        },
-        include: { materials: { include: { item: { select: { sku: true, name: true } } } }, workOrders: true },
+        const exploded = explodeBom(root, recommendation.quantity.toString(), catalog, context);
+        const order = await transaction.manufacturingOrder.create({
+          data: {
+            number: parsed.data.number,
+            itemId: recommendation.itemId,
+            quantity: recommendation.quantity,
+            warehouseId: parsed.data.warehouseId,
+            wipWarehouseId: parsed.data.wipWarehouseId,
+            sourceRecommendationId: recommendation.id,
+            bomId: root.bomId,
+            bomSnapshot: { selectedBomId: root.bomId, revisionStructures: snapshots, explosion: exploded.tree } as Prisma.InputJsonValue,
+            createdById: actorId,
+            plannedStart: recommendation.plannedReleaseDate,
+            plannedEnd: recommendation.requiredDate,
+            materials: { create: exploded.requirements.map((requirement, index) => ({ itemId: requirement.itemId, plannedQty: decimal(requirement.quantity), uomCode: requirement.uom, sequence: index + 1 })) },
+            workOrders: { create: { number: `${parsed.data.number}-001`, sequence: 1, operationCode: "ASSEMBLY", targetQuantity: recommendation.quantity } },
+          },
+          include: { materials: { include: { item: { select: { sku: true, name: true } } } }, workOrders: true },
+        });
+        await transaction.auditLog.create({ data: { actorId, action: "manufacturing_order.created", entityType: "ManufacturingOrder", entityId: order.id, source: "planning", metadata: { number: order.number, recommendationId: recommendation.id, bomId: root.bomId } } });
+        return order;
       });
-      await transaction.auditLog.create({ data: { actorId, action: "manufacturing_order.created", entityType: "ManufacturingOrder", entityId: order.id, source: "planning", metadata: { number: order.number, recommendationId: recommendation.id, bomId: root.bomId } } });
-      return order;
-    });
+    } catch (error) {
+      if (error instanceof ManufacturingError) throw error;
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        throw new ManufacturingError("CONFLICT", "Manufacturing order number already exists");
+      }
+      throw error;
+    }
   }
 
   async plan(actorId: string, orderId: string) {
@@ -152,24 +167,90 @@ export class ManufacturingService {
     });
   }
 
+  async cancel(actorId: string, orderId: string, reason?: string) {
+    return serializable(this.prisma, async (transaction) => {
+      const order = await transaction.manufacturingOrder.findUnique({
+        where: { id: orderId },
+        include: { materials: true, workOrders: true },
+      });
+      if (!order) throw new ManufacturingError("NOT_FOUND", "Manufacturing order not found");
+      if (order.status === "COMPLETED" || order.status === "CANCELLED" || order.status === "QC_PENDING") {
+        throw new ManufacturingError("INVALID_STATE", "Completed, cancelled, or QC pending manufacturing orders cannot be cancelled");
+      }
+      const hasIssued = order.materials.some((m) => m.issuedQty.greaterThan(0));
+      if (hasIssued) {
+        throw new ManufacturingError("INVALID_STATE", "Cannot cancel manufacturing order with issued materials. Return WIP materials first.");
+      }
+      const hasActiveWork = order.workOrders.some((w) => w.status === "IN_PROGRESS" || w.status === "COMPLETED");
+      if (hasActiveWork) {
+        throw new ManufacturingError("INVALID_STATE", "Cannot cancel manufacturing order with active or completed work orders.");
+      }
+
+      if (order.status === "RELEASED") {
+        for (const material of order.materials) {
+          if (material.reservationId) {
+            await this.inventory.releaseReservationInTransaction(transaction, actorId, material.reservationId);
+            await transaction.manufacturingOrderMaterial.update({
+              where: { id: material.id },
+              data: { reservationId: null },
+            });
+          }
+        }
+      }
+
+      await transaction.workOrder.updateMany({
+        where: {
+          manufacturingOrderId: orderId,
+          status: { in: ["PENDING", "PAUSED"] },
+        },
+        data: { status: "CANCELLED" },
+      });
+
+      const updated = await transaction.manufacturingOrder.update({
+        where: { id: orderId },
+        data: { status: "CANCELLED" },
+      });
+
+      await transaction.auditLog.create({
+        data: {
+          actorId,
+          action: "manufacturing_order.cancelled",
+          entityType: "ManufacturingOrder",
+          entityId: orderId,
+          source: "manufacturing",
+          metadata: { number: order.number, reason: reason ?? "User cancelled" },
+        },
+      });
+
+      return updated;
+    });
+  }
+
   async issueMaterial(actorId: string, orderId: string, materialId: string, input: unknown) {
     const parsed = materialIssueSchema.safeParse(input);
     if (!parsed.success) throw new ManufacturingError("INVALID_INPUT", parsed.error.message);
     return serializable(this.prisma, async (transaction) => {
       const order = await transaction.manufacturingOrder.findUnique({ where: { id: orderId } });
       if (!order) throw new ManufacturingError("NOT_FOUND", "Manufacturing order not found");
-      if (order.status !== "RELEASED" && order.status !== "IN_PROGRESS") throw new ManufacturingError("INVALID_STATE", "Materials can only be issued for released or in-progress orders");
       const material = await transaction.manufacturingOrderMaterial.findUnique({ where: { id: materialId } });
       if (!material || material.manufacturingOrderId !== orderId) throw new ManufacturingError("NOT_FOUND", "Manufacturing material not found");
       const quantity = new Prisma.Decimal(parsed.data.quantity);
-      const existingMovements = await transaction.stockMovement.findMany({ where: { idempotencyKey: { in: [`${parsed.data.idempotencyKey}:out`, `${parsed.data.idempotencyKey}:in`] } } });
+      const outboundKey = `manufacturing-issue:${parsed.data.idempotencyKey}:out`;
+      const inboundKey = `manufacturing-issue:${parsed.data.idempotencyKey}:in`;
+      const existingMovements = await transaction.stockMovement.findMany({ where: { idempotencyKey: { in: [outboundKey, inboundKey] } } });
       if (existingMovements.length > 0) {
-        const existingMovement = existingMovements.find((movement) => movement.movementType === "TRANSFER_OUT");
-        if (existingMovements.length !== 2 || !existingMovement || existingMovement.itemId !== material.itemId || existingMovement.sourceType !== "MANUFACTURING_ORDER" || existingMovement.sourceId !== `${orderId}:${materialId}` || !existingMovement.quantity.equals(quantity)) {
-          throw new ManufacturingError("CONFLICT", "Idempotency key belongs to another material issue");
-        }
-        return { materialId, movementId: existingMovement.id, issuedQty: material.issuedQty.toString() };
+        const outbound = existingMovements.find((movement) => movement.idempotencyKey === outboundKey);
+        const inbound = existingMovements.find((movement) => movement.idempotencyKey === inboundKey);
+        if (
+          existingMovements.length !== 2 || !outbound || !inbound ||
+          outbound.movementType !== "TRANSFER_OUT" || inbound.movementType !== "TRANSFER_IN" ||
+          [outbound, inbound].some((movement) => movement.itemId !== material.itemId || movement.sourceType !== "MANUFACTURING_ORDER" || movement.sourceId !== `${orderId}:${materialId}` || !movement.quantity.equals(quantity)) ||
+          outbound.warehouseId === inbound.warehouseId ||
+          inbound.warehouseId !== order.wipWarehouseId
+        ) throw new ManufacturingError("CONFLICT", "Idempotency key belongs to another material issue");
+        return { materialId, movementId: outbound.id, issuedQty: material.issuedQty.toString() };
       }
+      if (order.status !== "RELEASED" && order.status !== "IN_PROGRESS") throw new ManufacturingError("INVALID_STATE", "Materials can only be issued for released or in-progress orders");
       if (material.issuedQty.plus(quantity).greaterThan(material.plannedQty)) throw new ManufacturingError("INVALID_INPUT", "Issue quantity exceeds planned material quantity");
       const movement = await this.inventory.issueReservedManufacturingMaterial(transaction, { actorId, materialId, manufacturingOrderId: orderId, quantity: parsed.data.quantity, idempotencyKey: parsed.data.idempotencyKey });
       const materialUpdated = await transaction.manufacturingOrderMaterial.updateMany({ where: { id: materialId, issuedQty: material.issuedQty }, data: { issuedQty: { increment: quantity } } });
@@ -193,22 +274,26 @@ export class ManufacturingService {
     return serializable(this.prisma, async (transaction) => {
       const order = await transaction.manufacturingOrder.findUnique({ where: { id: orderId } });
       if (!order) throw new ManufacturingError("NOT_FOUND", "Manufacturing order not found");
-      if (order.status !== "RELEASED" && order.status !== "IN_PROGRESS" && order.status !== "QC_PENDING") throw new ManufacturingError("INVALID_STATE", "Material disposition requires an active manufacturing order");
       const material = await transaction.manufacturingOrderMaterial.findUnique({ where: { id: materialId } });
       if (!material || material.manufacturingOrderId !== orderId) throw new ManufacturingError("NOT_FOUND", "Manufacturing material not found");
       const quantity = new Prisma.Decimal(parsed.data.quantity);
-      const current = type === "CONSUMPTION" ? material.consumedQty : material.returnedQty;
-      const wipRemaining = material.issuedQty.minus(material.consumedQty).minus(material.returnedQty);
-      if (current.plus(quantity).greaterThan(material.issuedQty) || quantity.greaterThan(wipRemaining)) throw new ManufacturingError("INVALID_INPUT", "Disposition exceeds remaining WIP material");
       const existingKeys = type === "RETURN" ? [parsed.data.idempotencyKey, `${parsed.data.idempotencyKey}:source`] : [parsed.data.idempotencyKey];
       const existing = await transaction.stockMovement.findMany({ where: { idempotencyKey: { in: existingKeys } } });
       if (existing.length > 0) {
+        if (order.status !== "RELEASED" && order.status !== "IN_PROGRESS" && order.status !== "QC_PENDING" && order.status !== "COMPLETED") throw new ManufacturingError("INVALID_STATE", "Material disposition retry is not valid for this order status");
         const primaryType = type === "CONSUMPTION" ? "CONSUMPTION" : "RETURN";
         const expectedCount = type === "CONSUMPTION" ? 1 : 2;
-        const valid = existing.length === expectedCount && existing.some((entry) => entry.movementType === primaryType) && existing.every((entry) => entry.itemId === material.itemId && entry.sourceType === "MANUFACTURING_ORDER" && entry.sourceId === `${orderId}:${materialId}` && entry.quantity.equals(quantity));
-        if (!valid) throw new ManufacturingError("CONFLICT", "Idempotency key belongs to another material disposition");
-        return { materialId, movementId: existing.find((entry) => entry.movementType === primaryType)!.id, quantity: quantity.toString(), disposition: type };
+        const primary = existing.find((entry) => entry.idempotencyKey === parsed.data.idempotencyKey);
+        const source = type === "RETURN" ? existing.find((entry) => entry.idempotencyKey === `${parsed.data.idempotencyKey}:source`) : undefined;
+        const validPrimary = !!primary && primary.movementType === primaryType && primary.itemId === material.itemId && primary.warehouseId === order.wipWarehouseId && primary.sourceType === "MANUFACTURING_ORDER" && primary.sourceId === `${orderId}:${materialId}` && primary.quantity.equals(quantity);
+        const validSource = type === "CONSUMPTION" || (!!source && source.movementType === "TRANSFER_IN" && source.itemId === material.itemId && source.warehouseId === order.warehouseId && source.sourceType === "MANUFACTURING_ORDER" && source.sourceId === `${orderId}:${materialId}` && source.quantity.equals(quantity));
+        if (existing.length !== expectedCount || !validPrimary || !validSource) throw new ManufacturingError("CONFLICT", "Idempotency key belongs to another material disposition");
+        return { materialId, movementId: primary!.id, quantity: quantity.toString(), disposition: type };
       }
+      if (order.status !== "RELEASED" && order.status !== "IN_PROGRESS" && order.status !== "QC_PENDING") throw new ManufacturingError("INVALID_STATE", "Material disposition requires an active manufacturing order");
+      const current = type === "CONSUMPTION" ? material.consumedQty : material.returnedQty;
+      const wipRemaining = material.issuedQty.minus(material.consumedQty).minus(material.returnedQty);
+      if (current.plus(quantity).greaterThan(material.issuedQty) || quantity.greaterThan(wipRemaining)) throw new ManufacturingError("INVALID_INPUT", "Disposition exceeds remaining WIP material");
       const movement = type === "CONSUMPTION"
         ? await this.inventory.consumeWipMaterial(transaction, { actorId, materialId, manufacturingOrderId: orderId, quantity: parsed.data.quantity, idempotencyKey: parsed.data.idempotencyKey })
         : await this.inventory.returnWipMaterial(transaction, { actorId, materialId, manufacturingOrderId: orderId, quantity: parsed.data.quantity, idempotencyKey: parsed.data.idempotencyKey });
@@ -243,7 +328,7 @@ export class ManufacturingService {
     const { status, limit, offset } = parsed.data;
     const where: Prisma.ManufacturingOrderWhereInput = status ? { status } : {};
     const [data, total] = await Promise.all([
-      this.prisma.manufacturingOrder.findMany({ where, take: limit, skip: offset, orderBy: { createdAt: "desc" }, include: { item: { select: { sku: true, name: true } }, _count: { select: { materials: true, workOrders: true } } } }),
+      this.prisma.manufacturingOrder.findMany({ where, take: limit, skip: offset, orderBy: [{ createdAt: "desc" }, { id: "asc" }], include: { item: { select: { sku: true, name: true } }, _count: { select: { materials: true, workOrders: true } } } }),
       this.prisma.manufacturingOrder.count({ where }),
     ]);
     return { data, page: { limit, offset, total } };

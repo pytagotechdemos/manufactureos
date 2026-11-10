@@ -13,7 +13,9 @@ export type SessionUser = {
 };
 
 function initials(name: string) {
-  return name
+  const trimmed = name.trim();
+  if (!trimmed) return "U";
+  return trimmed
     .split(/\s+/)
     .slice(0, 2)
     .map((part) => part.charAt(0))

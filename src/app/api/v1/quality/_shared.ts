@@ -1,19 +1,25 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
-import { requirePermission } from "@/lib/authorize";
+import { requireAnyPermission, requirePermission } from "@/lib/authorize";
+import { type Permission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { QualityError, QualityService } from "@/modules/quality/application/quality-service";
 
 export const quality = new QualityService(prisma);
 
-export async function qualityAccess(permission: "qc.inspect" | "inventory.receive" | "inventory.read") {
+export async function qualityAccess(permission: Permission | Permission[]) {
   const user = await getCurrentUser();
   if (!user) return { error: NextResponse.json({ error: { code: "UNAUTHORIZED", message: "Authentication required" } }, { status: 401 }) };
-  await requirePermission(user.id, permission);
+  if (Array.isArray(permission)) {
+    await requireAnyPermission(user.id, permission);
+  } else {
+    await requirePermission(user.id, permission);
+  }
   return { user };
 }
 
 export function qualityErrorResponse(error: unknown) {
+  if (error instanceof SyntaxError) return NextResponse.json({ error: { code: "INVALID_INPUT", message: "Request body must be valid JSON" } }, { status: 400 });
   if (error instanceof QualityError) {
     const status = error.code === "INVALID_INPUT" ? 400 : error.code === "NOT_FOUND" ? 404 : error.code === "INSUFFICIENT_OUTPUT" ? 422 : 409;
     return NextResponse.json({ error: { code: error.code, message: error.message } }, { status });

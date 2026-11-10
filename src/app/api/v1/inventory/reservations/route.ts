@@ -7,6 +7,9 @@ export async function GET(request: Request) {
     if ("error" in access) return access.error;
     const params = new URL(request.url).searchParams;
     const status = params.get("status");
+    if (status !== null && status !== "ACTIVE" && status !== "RELEASED" && status !== "CONSUMED") {
+      return NextResponse.json({ error: { code: "INVALID_INPUT", message: "Invalid reservation status" } }, { status: 400 });
+    }
     return NextResponse.json({ data: await inventory.reservations({
       itemId: params.get("itemId") ?? undefined,
       warehouseId: params.get("warehouseId") ?? undefined,

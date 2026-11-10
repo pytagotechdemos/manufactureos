@@ -7,7 +7,7 @@ import { MasterDataError } from "./item-service";
 const conversionInputSchema = z.object({
   fromUomId: z.string().uuid(),
   toUomId: z.string().uuid(),
-  factor: z.string().trim().regex(/^\d+(\.\d+)?$/).refine((value) => new Decimal(value).greaterThan(0)),
+  factor: z.string().trim().regex(/^\d{1,12}(\.\d{1,12})?$/).refine((value) => new Decimal(value).greaterThan(0)),
 });
 
 export class UomConversionService {
@@ -69,5 +69,32 @@ export class UomConversionService {
       }
       throw error;
     }
+  }
+
+  async delete(actorId: string, id: string) {
+    return this.prisma.$transaction(async (transaction) => {
+      const conversion = await transaction.uomConversion.findUnique({
+        where: { id },
+        include: { fromUom: true, toUom: true },
+      });
+      if (!conversion) throw new MasterDataError("NOT_FOUND", "UOM conversion not found");
+
+      await transaction.uomConversion.delete({ where: { id } });
+      await transaction.auditLog.create({
+        data: {
+          actorId,
+          action: "uom_conversion.deleted",
+          entityType: "UomConversion",
+          entityId: id,
+          source: "master-data",
+          metadata: {
+            from: conversion.fromUom.code,
+            to: conversion.toUom.code,
+            factor: conversion.factor.toString(),
+          },
+        },
+      });
+      return { success: true };
+    });
   }
 }

@@ -1,11 +1,11 @@
 import "dotenv/config";
 import Decimal from "decimal.js";
-import { Prisma, type PrismaClient } from "@/generated/prisma/client";
+import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "../src/lib/prisma";
 import { seedAccessControl } from "./seed-access-control";
 
 /**
- * Deterministic seed data for the furniture manufacturing scenario.
+ * Repeatable seed data for the furniture manufacturing scenario.
  *
  * Scenario: Wooden Office Desk production
  * - RM-001 Oak Board (Raw Material, BUY, M)
@@ -48,7 +48,7 @@ async function main() {
       update: { name: "Meter", dimension: "LENGTH", precision: 3 },
       create: { code: "M", name: "Meter", dimension: "LENGTH", precision: 3 },
     });
-    const uomKg = await tx.unitOfMeasure.upsert({
+    await tx.unitOfMeasure.upsert({
       where: { code: "KG" },
       update: { name: "Kilogram", dimension: "MASS", precision: 3 },
       create: { code: "KG", name: "Kilogram", dimension: "MASS", precision: 3 },
@@ -179,7 +179,7 @@ async function main() {
     });
 
     // ── 5. Supplier ───────────────────────────────────────────────────────
-    const supplier = await tx.supplier.upsert({
+    await tx.supplier.upsert({
       where: { code: "SUP-001" },
       update: {},
       create: {
@@ -204,7 +204,7 @@ async function main() {
         status: "ACTIVE",
       },
     });
-    const warehouseWip = await tx.warehouse.upsert({
+    await tx.warehouse.upsert({
       where: { code: "WH-WIP" },
       update: {},
       create: {
@@ -217,7 +217,7 @@ async function main() {
     });
 
     // ── 7. Work Centers ───────────────────────────────────────────────────
-    const wcAssembly = await tx.workCenter.upsert({
+    await tx.workCenter.upsert({
       where: { code: "WC-ASM" },
       update: {},
       create: {
@@ -228,7 +228,7 @@ async function main() {
         status: "ACTIVE",
       },
     });
-    const wcCNC = await tx.workCenter.upsert({
+    await tx.workCenter.upsert({
       where: { code: "WC-CNC" },
       update: {},
       create: {
@@ -239,7 +239,7 @@ async function main() {
         status: "ACTIVE",
       },
     });
-    const wcFinishing = await tx.workCenter.upsert({
+    await tx.workCenter.upsert({
       where: { code: "WC-FIN" },
       update: {},
       create: {
@@ -266,18 +266,24 @@ async function main() {
         createdById: adminUser.id,
       },
     });
-    await tx.bomLine.createMany({
-      data: [
-        { bomId: bomDesk.id, componentId: itemOakBoard.id, quantity: D("2.0"), uomId: uomM.id, scrapRate: D("0.05"), sequence: 1, notes: "Tabletop and legs" },
-        { bomId: bomDesk.id, componentId: itemSteelBrackets.id, quantity: D("4.0"), uomId: uomPcs.id, scrapRate: D("0.02"), sequence: 2, notes: "Corner brackets" },
-        { bomId: bomDesk.id, componentId: itemWoodScrews.id, quantity: D("20.0"), uomId: uomPcs.id, scrapRate: D("0.01"), sequence: 3, notes: "Assembly screws" },
-        { bomId: bomDesk.id, componentId: itemDeskDrawer.id, quantity: D("1.0"), uomId: uomPcs.id, scrapRate: D("0"), sequence: 4, notes: "Pre-built drawer" },
-      ],
-    });
-    await tx.bom.update({
-      where: { id: bomDesk.id },
-      data: { status: "APPROVED", approvedById: adminUser.id, approvedAt: new Date("2026-01-01T00:00:00Z") },
-    });
+    const deskLineCount = await tx.bomLine.count({ where: { bomId: bomDesk.id } });
+    if (deskLineCount !== 0 && deskLineCount !== 4) throw new Error("BOM-DESK-001 has an unexpected number of lines");
+    if (deskLineCount === 0) {
+      await tx.bomLine.createMany({
+        data: [
+          { bomId: bomDesk.id, componentId: itemOakBoard.id, quantity: D("2.0"), uomId: uomM.id, scrapRate: D("0.05"), sequence: 1, notes: "Tabletop and legs" },
+          { bomId: bomDesk.id, componentId: itemSteelBrackets.id, quantity: D("4.0"), uomId: uomPcs.id, scrapRate: D("0.02"), sequence: 2, notes: "Corner brackets" },
+          { bomId: bomDesk.id, componentId: itemWoodScrews.id, quantity: D("20.0"), uomId: uomPcs.id, scrapRate: D("0.01"), sequence: 3, notes: "Assembly screws" },
+          { bomId: bomDesk.id, componentId: itemDeskDrawer.id, quantity: D("1.0"), uomId: uomPcs.id, scrapRate: D("0"), sequence: 4, notes: "Pre-built drawer" },
+        ],
+      });
+    }
+    if (bomDesk.status !== "APPROVED") {
+      await tx.bom.update({
+        where: { id: bomDesk.id },
+        data: { status: "APPROVED", approvedById: adminUser.id, approvedAt: new Date("2026-01-01T00:00:00Z") },
+      });
+    }
 
     // BOM-DRAWER-001: Desk Drawer v1.0
     const bomDrawer = await tx.bom.upsert({
@@ -293,16 +299,22 @@ async function main() {
         createdById: adminUser.id,
       },
     });
-    await tx.bomLine.createMany({
-      data: [
-        { bomId: bomDrawer.id, componentId: itemOakBoard.id, quantity: D("0.5"), uomId: uomM.id, scrapRate: D("0.10"), sequence: 1, notes: "Drawer box panels" },
-        { bomId: bomDrawer.id, componentId: itemWoodScrews.id, quantity: D("12.0"), uomId: uomPcs.id, scrapRate: D("0.02"), sequence: 2, notes: "Drawer assembly screws" },
-      ],
-    });
-    await tx.bom.update({
-      where: { id: bomDrawer.id },
-      data: { status: "APPROVED", approvedById: adminUser.id, approvedAt: new Date("2026-01-01T00:00:00Z") },
-    });
+    const drawerLineCount = await tx.bomLine.count({ where: { bomId: bomDrawer.id } });
+    if (drawerLineCount !== 0 && drawerLineCount !== 2) throw new Error("BOM-DRAWER-001 has an unexpected number of lines");
+    if (drawerLineCount === 0) {
+      await tx.bomLine.createMany({
+        data: [
+          { bomId: bomDrawer.id, componentId: itemOakBoard.id, quantity: D("0.5"), uomId: uomM.id, scrapRate: D("0.10"), sequence: 1, notes: "Drawer box panels" },
+          { bomId: bomDrawer.id, componentId: itemWoodScrews.id, quantity: D("12.0"), uomId: uomPcs.id, scrapRate: D("0.02"), sequence: 2, notes: "Drawer assembly screws" },
+        ],
+      });
+    }
+    if (bomDrawer.status !== "APPROVED") {
+      await tx.bom.update({
+        where: { id: bomDrawer.id },
+        data: { status: "APPROVED", approvedById: adminUser.id, approvedAt: new Date("2026-01-01T00:00:00Z") },
+      });
+    }
 
     // ── 9. Stock Balances ─────────────────────────────────────────────────
     await tx.stockBalance.upsert({

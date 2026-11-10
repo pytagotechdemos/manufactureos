@@ -1,8 +1,8 @@
 import Decimal from "decimal.js";
 import { z } from "zod";
 
-const nonnegative = z.string().trim().regex(/^\d+(\.\d+)?$/).refine((value) => new Decimal(value).greaterThanOrEqualTo(0));
-const positive = z.string().trim().regex(/^\d+(\.\d+)?$/).refine((value) => new Decimal(value).greaterThan(0));
+const nonnegative = z.string().trim().regex(/^\d{1,13}(\.\d{1,6})?$/).refine((value) => new Decimal(value).greaterThanOrEqualTo(0));
+const positive = z.string().trim().regex(/^\d{1,13}(\.\d{1,6})?$/).refine((value) => new Decimal(value).greaterThan(0));
 
 export const qcInspectionCreateSchema = z.object({
   number: z.string().trim().min(1).max(40),

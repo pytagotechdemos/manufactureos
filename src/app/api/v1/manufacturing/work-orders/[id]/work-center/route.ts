@@ -4,7 +4,7 @@ import { workOrderAccess, workOrderErrorResponse, workOrders } from "@/app/api/v
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const access = await workOrderAccess("work_order.read");
+    const access = await workOrderAccess("work_order.assign");
     if ("error" in access) return access.error;
     await requirePermission(access.user.id, "work_order.assign");
     const { id } = await context.params;

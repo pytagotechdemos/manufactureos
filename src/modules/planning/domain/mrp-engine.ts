@@ -125,54 +125,79 @@ function effectiveBomFor(itemId: string, requiredDate: Date, boms: readonly MrpB
   return candidates[0];
 }
 
-type GrossNeed = { itemId: string; quantity: Decimal; date: Date; demandIds: Set<string> };
+type GrossNeed = { itemId: string; quantity: Decimal; date: Date; demandIds: Set<string>; paths: readonly (readonly string[])[] };
 
-function explodeMakeNeed(
-  itemId: string,
-  quantity: Decimal,
-  requiredDate: Date,
-  sourceDemandIds: Set<string>,
-  input: MrpInput,
-  path: readonly string[],
-  makeNeeds: GrossNeed[],
-  buyNeeds: GrossNeed[],
-  remainingMakeStock: Map<string, Decimal>,
-) {
-  if (path.includes(itemId)) throw new MrpError("BOM_CYCLE", `MRP BOM cycle detected: ${[...path, itemId].join(" -> ")}`);
-  const item = input.items.find((candidate) => candidate.itemId === itemId);
-  if (!item) throw new MrpError("MISSING_ITEM", `MRP item ${itemId} is missing`);
-  if (item.supplyType === "BUY") {
-    buyNeeds.push({ itemId, quantity, date: requiredDate, demandIds: new Set(sourceDemandIds) });
-    return;
+function explodeMakeNeeds(initialNeeds: GrossNeed[], input: MrpInput): GrossNeed[] {
+  const expanded: GrossNeed[] = [];
+  let layer = initialNeeds;
+  const projected = new Map([...input.availableStock.entries()].map(([id, quantity]) => [id, decimal(quantity, "Available stock")]));
+  const supply = new Map<string, Array<{ date: Date; quantity: Decimal }>>();
+  for (const row of input.confirmedSupply) {
+    const item = input.items.find((candidate) => candidate.itemId === row.itemId);
+    if (item?.supplyType !== "MAKE" || row.supplyType !== "MANUFACTURING_ORDER") continue;
+    const rows = supply.get(row.itemId) ?? [];
+    rows.push({ date: date(row.availableDate, "Supply available date"), quantity: decimal(row.quantity, "Supply quantity", false) });
+    supply.set(row.itemId, rows);
   }
-
-  makeNeeds.push({ itemId, quantity, date: requiredDate, demandIds: new Set(sourceDemandIds) });
-  const available = remainingMakeStock.get(itemId) ?? new Decimal(0);
-  const covered = Decimal.min(available, quantity);
-  remainingMakeStock.set(itemId, available.minus(covered));
-  const buildQuantity = quantity.minus(covered);
-  if (buildQuantity.isZero()) return;
-
-  const bom = effectiveBomFor(itemId, requiredDate, input.boms);
-  if (!bom) throw new MrpError("MISSING_BOM", `No effective approved BOM exists for MAKE item ${itemId} on ${dateKey(requiredDate)}`);
-  const outputQty = decimal(bom.outputQuantity, "BOM output quantity", false);
-  const buildFactor = buildQuantity.div(outputQty);
-  const componentRequiredDate = addDays(requiredDate, -item.leadTimeDays);
-
-  for (const line of bom.lines) {
-    const componentQty = decimal(line.quantityPerOutput, "BOM component quantity", false);
-    const scrapRate = decimal(line.scrapRate, "BOM scrap rate");
-    const extended = componentQty.mul(buildFactor).mul(new Decimal(1).plus(scrapRate));
-    explodeMakeNeed(line.componentItemId, extended, componentRequiredDate, sourceDemandIds, input, [...path, itemId], makeNeeds, buyNeeds, remainingMakeStock);
+  while (layer.length > 0) {
+    const grouped = new Map<string, GrossNeed>();
+    for (const need of layer) {
+      if (need.paths.some((path) => path.includes(need.itemId))) {
+        const path = need.paths.find((candidate) => candidate.includes(need.itemId)) ?? [];
+        throw new MrpError("BOM_CYCLE", `MRP BOM cycle detected: ${[...path, need.itemId].join(" -> ")}`);
+      }
+      const key = `${need.itemId}\u0000${dateKey(need.date)}`;
+      const group = grouped.get(key) ?? { itemId: need.itemId, quantity: new Decimal(0), date: need.date, demandIds: new Set<string>(), paths: [] };
+      group.quantity = group.quantity.plus(need.quantity);
+      for (const id of need.demandIds) group.demandIds.add(id);
+      group.paths = [...group.paths, ...need.paths];
+      grouped.set(key, group);
+    }
+    const next: GrossNeed[] = [];
+    for (const need of [...grouped.values()].sort((left, right) => left.date.getTime() - right.date.getTime() || left.itemId.localeCompare(right.itemId))) {
+      const item = input.items.find((candidate) => candidate.itemId === need.itemId);
+      if (!item) throw new MrpError("MISSING_ITEM", `MRP item ${need.itemId} is missing`);
+      if (item.supplyType === "BUY") { expanded.push(need); continue; }
+      expanded.push(need);
+      let remaining = need.quantity;
+      const onHand = projected.get(need.itemId) ?? new Decimal(0);
+      const usedStock = Decimal.min(onHand, remaining);
+      remaining = remaining.minus(usedStock);
+      let usedSupply = new Decimal(0);
+      const dated = (supply.get(need.itemId) ?? []).sort((a, b) => a.date.getTime() - b.date.getTime());
+      for (const receipt of dated) {
+        if (receipt.date > need.date || remaining.isZero()) continue;
+        const used = Decimal.min(receipt.quantity, remaining);
+        receipt.quantity = receipt.quantity.minus(used);
+        remaining = remaining.minus(used);
+        usedSupply = usedSupply.plus(used);
+      }
+      supply.set(need.itemId, dated.filter((row) => row.quantity.greaterThan(0)));
+      const availableBeforeDemand = onHand.plus(usedSupply);
+      const safety = decimal(item.safetyStock, "Safety stock");
+      const buildNeed = Decimal.max(need.quantity.plus(safety).minus(availableBeforeDemand), new Decimal(0));
+      const build = buildNeed.greaterThan(0) ? roundLot(buildNeed, item) : new Decimal(0);
+      projected.set(need.itemId, availableBeforeDemand.plus(build).minus(need.quantity));
+      if (build.isZero()) continue;
+      const bom = effectiveBomFor(need.itemId, need.date, input.boms);
+      if (!bom) throw new MrpError("MISSING_BOM", `No effective approved BOM exists for MAKE item ${need.itemId} on ${dateKey(need.date)}`);
+      const factor = build.div(decimal(bom.outputQuantity, "BOM output quantity", false));
+      const componentDate = addDays(need.date, -item.leadTimeDays);
+      for (const line of bom.lines) {
+        const qty = decimal(line.quantityPerOutput, "BOM component quantity", false);
+        const scrap = decimal(line.scrapRate, "BOM scrap rate");
+        next.push({ itemId: line.componentItemId, quantity: qty.mul(factor).mul(new Decimal(1).plus(scrap)), date: componentDate, demandIds: new Set(need.demandIds), paths: need.paths.map((path) => [...path, need.itemId]) });
+      }
+    }
+    layer = next;
   }
+  return expanded;
 }
 
 export function calculateMrp(input: MrpInput): MrpResult {
   const asOfDate = date(input.asOfDate, "MRP as-of date");
   const items = new Map(input.items.map((item) => [item.itemId, item]));
-  const needs: GrossNeed[] = [];
-  const plannedMake: GrossNeed[] = [];
-  const remainingMakeStock = new Map([...input.availableStock.entries()].map(([itemId, quantity]) => [itemId, decimal(quantity, "Available stock")]));
+  const initialNeeds: GrossNeed[] = [];
 
   const demands = [...input.demands].sort((left, right) => left.requiredDate.localeCompare(right.requiredDate) || left.itemId.localeCompare(right.itemId) || left.demandId.localeCompare(right.demandId));
   for (const demand of demands) {
@@ -180,23 +205,22 @@ export function calculateMrp(input: MrpInput): MrpResult {
     const quantity = decimal(demand.quantity, "Demand quantity", false);
     const item = items.get(demand.itemId);
     if (!item) throw new MrpError("MISSING_ITEM", `MRP item ${demand.itemId} is missing`);
-    if (item.supplyType === "BUY") {
-      needs.push({ itemId: item.itemId, quantity, date: requiredDate, demandIds: new Set([demand.demandId]) });
-    } else {
-      explodeMakeNeed(item.itemId, quantity, requiredDate, new Set([demand.demandId]), input, [], plannedMake, needs, remainingMakeStock);
-    }
+    initialNeeds.push({ itemId: item.itemId, quantity, date: requiredDate, demandIds: new Set([demand.demandId]), paths: [[]] });
   }
-
-  for (const makeNeed of plannedMake) {
-    needs.push(makeNeed);
-  }
+  const needs = explodeMakeNeeds(initialNeeds, input);
 
   const byItem = new Map<string, GrossNeed[]>();
   for (const need of needs) byItem.set(need.itemId, [...(byItem.get(need.itemId) ?? []), need]);
   const recommendations: MrpRecommendation[] = [];
   const buckets: MrpBucket[] = [];
 
-  for (const [itemId, itemNeeds] of [...byItem.entries()].sort(([left], [right]) => left.localeCompare(right))) {
+  const relevantItemIds = [...new Set([
+    ...byItem.keys(),
+    ...input.confirmedSupply.map((receipt) => receipt.itemId),
+  ])].sort();
+
+  for (const itemId of relevantItemIds) {
+    const itemNeeds = byItem.get(itemId) ?? [];
     const item = items.get(itemId);
     if (!item) throw new MrpError("MISSING_ITEM", `MRP item ${itemId} is missing`);
     const supply = input.confirmedSupply
@@ -227,7 +251,7 @@ export function calculateMrp(input: MrpInput): MrpResult {
           quantity: plannedQty.toString(),
           requiredDate: key,
           plannedReleaseDate: dateKey(releaseDate),
-          late: releaseDate < asOfDate,
+          late: dateKey(releaseDate) < dateKey(asOfDate),
           sourceDemandIds: [...new Set(datedNeeds.flatMap((need) => [...need.demandIds]))].sort(),
         };
         recommendations.push(recommendation);

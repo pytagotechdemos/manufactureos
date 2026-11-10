@@ -7,6 +7,7 @@ import { MasterDataError, ItemService } from "@/modules/master-data/application/
 const items = new ItemService(prisma);
 
 function errorResponse(error: unknown) {
+  if (error instanceof SyntaxError) return NextResponse.json({ error: { code: "INVALID_INPUT", message: "Request body must be valid JSON" } }, { status: 400 });
   if (error instanceof MasterDataError) {
     const status = error.code === "INVALID_INPUT" ? 400 : error.code === "NOT_FOUND" ? 404 : 409;
     return NextResponse.json({ error: { code: error.code, message: error.message } }, { status });

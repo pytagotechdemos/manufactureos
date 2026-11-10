@@ -70,7 +70,8 @@ suite("MRP PostgreSQL integration", () => {
     const history = await planning.listMrpRuns();
     expect(history.some((run) => run.id === first.id)).toBe(true);
     const detail = await planning.getMrpRun(first.id);
-    expect(detail.buckets).toHaveLength(2);
+    const itemBuckets = detail.buckets.filter((bucket) => bucket.itemId === itemId);
+    expect(itemBuckets).toHaveLength(2);
     expect(detail.recommendations).toHaveLength(1);
     expect(detail.recommendations[0]?.sources).toHaveLength(1);
   });

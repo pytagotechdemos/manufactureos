@@ -7,7 +7,7 @@ import { WorkOrderError, WorkOrderService } from "@/modules/manufacturing/applic
 
 export const workOrders = new WorkOrderService(prisma);
 
-export async function workOrderAccess(permission: "work_order.read" | "work_order.execute") {
+export async function workOrderAccess(permission: "work_order.read" | "work_order.execute" | "work_order.assign") {
   const user = await getCurrentUser();
   if (!user) return { error: NextResponse.json({ error: { code: "UNAUTHORIZED", message: "Authentication required" } }, { status: 401 }) };
   await requirePermission(user.id, permission);
@@ -15,6 +15,7 @@ export async function workOrderAccess(permission: "work_order.read" | "work_orde
 }
 
 export function workOrderErrorResponse(error: unknown) {
+  if (error instanceof SyntaxError) return NextResponse.json({ error: { code: "INVALID_INPUT", message: "Request body must be valid JSON" } }, { status: 400 });
   if (error instanceof InventoryError) {
     const status = error.code === "INVALID_INPUT" ? 400 : error.code === "INSUFFICIENT_STOCK" ? 422 : 409;
     return NextResponse.json({ error: { code: error.code, message: error.message } }, { status });

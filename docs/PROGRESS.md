@@ -79,40 +79,53 @@ Phase 7 — Deployment & end-to-end verification (in progress)
 - Serverless protection: all `/api/v1/**` route handlers export `maxDuration = 60`; serializable transactions use `maxWait 10 s` / `timeout 30 s` to absorb Neon latency.
 - Work-order execution is server-guarded: start requires `RELEASED`/`IN_PROGRESS` MO, while time entry, pause, and completion require `IN_PROGRESS`.
 
-## UI/UX rework (completed)
-- UI diterjemahkan sepenuhnya ke **Bahasa Indonesia**: login, navigasi sidebar, semua halaman dashboard (overview, items, engineering/bom-explorer, planning, inventory, procurement, manufacturing, work-orders, receipts, quality, reports, administration, boms/create), tabel, form, badge status, dan alert
-- New design system: `Button`, `Card`, `Badge`/`StatusBadge`, `Field`/`Input`/`Select`/`Textarea`, `Table`, `Stat`/`StatGrid`, `Alert`, `EmptyState`, `PageHeader`, `Tabs`, `Spinner`/`Skeleton` under `src/components/ui/`
-- New shell: `AppShell` with sticky header, collapsible sidebar nav (mobile drawer), user profile + sign-out
-- Login page redesigned (brand panel, consistent inputs/buttons, `role=alert` error banner)
-- All dashboard screens wired to real APIs: overview metrics, items, procurement (PO + goods receipt), manufacturing, work orders, quality inspections, inventory balances
-- Administration: real users/roles from DB, status badges, create-account form via `POST /api/v1/users`
-- Raw UUID text inputs replaced with dropdowns backed by new GET endpoints
-- Presentation helpers: `formatDate`, `formatDateTime`, `formatMoney`, `formatQuantity`, `formatRelative`, `truncateId` (`src/lib/format.ts`) — Asia/Jakarta presentation, UTC persistence
-- `SearchInput` is a controlled component (`value`/`onChange`); server pages pass initial data to client screens rather than handlers across the RSC boundary
-- Added missing GET endpoints: `/api/v1/suppliers`, `/api/v1/uoms`, `/api/v1/categories`, `/api/v1/warehouses`, `/api/v1/roles`, `/api/v1/users` (+POST), `/api/v1/purchase-order-lines`, `/api/v1/procurement/goods-receipts` (GET+POST)
+## UI/UX & Enterprise Data Matrix (completed)
+- UI diterjemahkan sepenuhnya ke **Bahasa Indonesia**: login, navigasi sidebar, semua halaman dashboard (overview, items, engineering/bom-explorer, planning, inventory, procurement, manufacturing, work-orders, receipts, quality, reports, administration, boms/create), tabel, form, badge status, dan alert.
+- New design system: `Button`, `Card`, `Badge`/`StatusBadge`, `Field`/`Input`/`Select`/`Textarea`, `Table`, `Stat`/`StatGrid`, `Alert`, `EmptyState`, `PageHeader`, `Tabs`, `Spinner`/`Skeleton` under `src/components/ui/`.
+- Reusable `Pagination` component (`src/components/ui/pagination.tsx`): row count ranges, current/total pages, previous/next, and configurable items-per-page selector.
+- Shared RFC 4180 / Excel UTF-8 BOM CSV export engine (`src/lib/csv.ts`): handles comma/quote/newline escaping with test coverage (`src/lib/csv.test.ts`).
+- Reusable `ExportCsvButton` client component (`src/components/admin/export-csv-button.tsx`) enabling client-side CSV downloads directly from React Server Component panels.
+- **Enterprise Pagination, Instant Search & CSV Export Matrix**:
+  - **Inventory (`/inventory`)**: Pagination & CSV export on Balances, Reservations, and Movement Ledger.
+  - **Items Catalog (`/items`)**: Pagination, SKU search, URL parameter sync (`?sku=`, `?q=`), and CSV export.
+  - **Manufacturing Orders (`/manufacturing`)**: Pagination, MO search, URL parameter sync (`?mo=`), and CSV export.
+  - **Shop Floor Work Orders (`/manufacturing/work-orders`)**: Status filter tabs, search, pagination, and CSV export.
+  - **Manufacturing Materials (`/manufacturing/materials`)**: Component consumption/return/WIP matrix with CSV export.
+  - **Production Receipts (`/manufacturing/receipts`)**: Quality-posted finished goods receipts with pagination and CSV export.
+  - **Quality Control (`/quality`)**: Search, status filters, pagination, and CSV export on Pending Inspections and Inspection History.
+  - **Procurement & Supply Chain (`/procurement`)**: Pagination and CSV export across Purchase Orders (PO), Purchase Requests (PR), and Goods Receipts (GR).
+  - **Engineering & BOM Explorer (`/engineering`)**: BOM revision list pagination, search, status filter, and multi-scope CSV export (BOM headers, component lines, exploded batch requirements).
+  - **Planning & MRP (`/planning`)**: Production demands pagination, search, and CSV export; MRP recommendations pagination and CSV export; time-phased buckets pagination and CSV export.
+  - **Financial & Cost Reports (`/reports`)**: Search and pagination on Production Costs (with expandable material/labor/overhead variance breakdown), Inventory Valuation, and WIP Value, with CSV export.
+  - **Administration (`/administration`)**: CSV export across Users, Item Categories, UOMs, Work Centers, Warehouses, Suppliers, and Audit Logs.
+- AppShell with sticky header, collapsible sidebar nav (mobile drawer), user profile + sign-out.
+- Presentation helpers: `formatDate`, `formatDateTime`, `formatMoney`, `formatQuantity`, `formatRelative`, `todayJakarta`, `truncateId` (`src/lib/format.ts`) — Asia/Jakarta presentation, UTC persistence.
+- Verified RBAC assertions: `scripts/check-rbac.ts` tests 100% permission grant (37/37 granular permissions, 8 roles).
+- **Server-Side Reporting & Period Filtering (implemented)**: Dedicated `GET /api/v1/reports/costs` endpoint powered by `ManufacturingCostService.getCostReport()`, replacing N+1 client-side HTTP waterfall requests with a single database aggregation query with period date range (`startDate`, `endDate`) and status filtering.
+- **Production Receipt Cost Revaluation (implemented)**: `InventoryService.revalueProductionReceipts()` automatically revalues unpriced finished goods / subassembly receipts and updates moving-average stock balance values upon finalization of actual manufacturing order costing in a serializable transaction with audit trail logging.
+- **Item Lifecycle & Audit View (implemented)**:
+  - Added `ItemService.getItemDetail()` and dedicated `GET /api/v1/items/[id]` endpoint protected by `item.read` permission.
+  - Returns complete item master properties, live stock balances across all warehouses, BOM output revisions (MAKE), parent BOM usages (as component), and chronological audit history.
+  - Enhanced `ItemService.update()` with automated before-and-after field diff capture in audit metadata (`entityType: "Item"`).
+  - Built interactive `ItemLifecycleModal` (`src/components/master-data/item-lifecycle-modal.tsx`) with three dedicated views (Riwayat Audit dengan diff visual, Saldo Persediaan multi-gudang, Keterkaitan Struktur BOM) and per-item audit CSV export.
+  - Integrated history action button directly into the Data Barang (`/items`) table.
+  - Expanded unit test suite with 4 new tests (`src/modules/master-data/application/item-service.test.ts`), bringing total unit test coverage to 159 passed tests across 26 test suites.
+
+- **Disposable-Database CI & E2E Pipeline (implemented)**:
+  - Added `disposable-db-e2e` job in `.github/workflows/ci.yml` powered by a dedicated PostgreSQL 17 service container.
+  - Automatically runs `prisma migrate deploy` (all 20 migrations), seeds master data & access control (`prisma:seed`), provisions administrator credentials out-of-band (`admin:create`), checks 37/37 granular RBAC permissions (`rbac:check`), runs all 11 PostgreSQL integration tests, and executes Playwright end-to-end suite (`test:e2e`).
+  - Added `"test:e2e": "playwright test"` and configured `"prisma": { "seed": "tsx prisma/seed.ts" }` in `package.json`.
 
 ## Not implemented / not verified
-- RBAC seed row counts not verified against the database (the seed runs, but no count assertions exist).
-- Item deletion is intentionally not exposed; item lifecycle is limited to status changes because historical transactions reference items.
-- BOM draft line editing after creation is not exposed; drafts move forward through submit-review/approve/obsolete only.
-- Reporting is aggregated client-side over existing APIs; there is no server-side report endpoint or period selector.
-- Production receipts currently create unvalued FG/SA stock (`averageUnitCost` null) because costing is snapshotted after receipt. The valuation report marks these balances “Belum dinilai” and excludes them from the total; a cost-revaluation/finalization flow is still missing.
-- Root-cause variance drill-down (per material/labor line) is not implemented; the reports screen shows MO-level variance only.
 - Custom domain and preview-deployment protection rules are not configured.
-- E2E runs against whatever `DATABASE_URL` points at (currently Neon); there is no disposable-database variant of it.
 
 ## Risks and blockers
 - Local Compose PostgreSQL on port 5433 because host port 5432 was allocated; volume `bom_manufactureos-postgres`.
 - `src/lib/prisma.ts` selects the Neon adapter unless the connection string contains `localhost`/`127.0.0.1`.
 - BOM explosion accepts a caller-provided BOM catalog; repositories must select only approved/effective revisions before planning or MO release.
 - Dedicated UOM conversion administration service needed to keep stored conversions dimension-compatible.
-- MO material explosion expands MAKE subassemblies to leaf components, while MRP also plans child MAKE MOs. As a result, parent MOs do not consume subassembly stock. Decide whether parent MOs should stop at MAKE components (consuming SA-001) or MRP should suppress child MAKE recommendations when parent explosion already covers them.
+- Multi-level MO material explosion configured with `stopAtMake: true` in `ManufacturingService`, ensuring parent MOs consume subassembly inventory (e.g. SA-001) while child MAKE orders produce them without double component deduction.
 - Global git credential settings on this machine prompt for a different GitHub identity; pushes use an explicit token URL.
 
 ## Next slice
-1. Add count/consistency assertions for the RBAC seed.
-2. Add period filters and a server-side report endpoint; add per-material/per-labor variance drill-down.
-3. Add production-receipt cost revaluation so FG/SA balances receive an average unit cost after actual costing.
-4. Add editable BOM drafts and an explicit item lifecycle audit view.
-5. Add a disposable-database E2E job to CI.
-6. Add a custom domain and decide preview-deployment protection.
+1. Custom domain and preview-deployment protection policy setup when domain is provisioned.

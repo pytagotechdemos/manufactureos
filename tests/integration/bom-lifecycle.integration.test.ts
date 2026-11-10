@@ -78,7 +78,9 @@ suite("BOM lifecycle PostgreSQL integration", () => {
     const detail = await service.get(bomId);
     expect(detail.number).toBe(bomNumber);
     const explosion = await service.explosion(bomId, { quantity: "2" });
-    expect(explosion.requirements).toEqual([{ itemId: componentItemId, quantity: "5.25", uom: detail.lines[0]?.uom.code }]);
+    expect(explosion.requirements).toEqual([
+      expect.objectContaining({ itemId: componentItemId, quantity: "5.25", uom: detail.lines[0]?.uom.code }),
+    ]);
     const listed = await service.list({ search: bomNumber });
     expect(listed.page.total).toBe(1);
 

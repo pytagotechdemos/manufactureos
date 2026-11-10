@@ -12,6 +12,7 @@ env:
 
 jobs:
   lint-typecheck-test:
+    name: Lint, Typecheck & Unit Tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -40,10 +41,81 @@ jobs:
       - name: Run TypeScript typecheck
         run: corepack pnpm typecheck
 
-      - name: Run Vitest tests
+      - name: Run Vitest unit tests
         run: corepack pnpm test
 
+  disposable-db-e2e:
+    name: Disposable DB Integration & E2E
+    runs-on: ubuntu-latest
+    needs: lint-typecheck-test
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: manufactureos_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:password@localhost:5432/manufactureos_test
+      DATABASE_URL_UNPOOLED: postgresql://postgres:password@localhost:5432/manufactureos_test
+      BETTER_AUTH_SECRET: ci-test-secret-at-least-32-chars-long-1234567890
+      BETTER_AUTH_URL: http://localhost:3000
+      ADMIN_EMAIL: admin@manufactureos.local
+      ADMIN_PASSWORD: TestAdministratorPassword123!
+      E2E_EMAIL: admin@manufactureos.local
+      E2E_PASSWORD: TestAdministratorPassword123!
+      RUN_DB_INTEGRATION: "true"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: corepack pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: corepack pnpm prisma:generate
+
+      - name: Deploy migrations to disposable PostgreSQL
+        run: corepack pnpm prisma migrate deploy
+
+      - name: Seed scenario master data & access control
+        run: corepack pnpm prisma:seed
+
+      - name: Provision admin credentials
+        run: corepack pnpm admin:create
+
+      - name: Verify RBAC permissions matrix
+        run: corepack pnpm rbac:check
+
+      - name: Run PostgreSQL Integration Tests
+        run: corepack pnpm vitest run tests/integration --no-file-parallelism
+
+      - name: Install Playwright browsers
+        run: corepack pnpm exec playwright install --with-deps chromium
+
+      - name: Run Playwright E2E Tests
+        run: corepack pnpm test:e2e
+
   build:
+    name: Production Build Verification
     runs-on: ubuntu-latest
     needs: lint-typecheck-test
     steps:

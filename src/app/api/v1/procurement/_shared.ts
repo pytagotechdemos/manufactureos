@@ -14,6 +14,7 @@ export async function procurementAccess(permission: "purchase_request.read" | "p
 }
 
 export function procurementErrorResponse(error: unknown) {
+  if (error instanceof SyntaxError) return NextResponse.json({ error: { code: "INVALID_INPUT", message: "Request body must be valid JSON" } }, { status: 400 });
   if (error instanceof ProcurementError) {
     const status = error.code === "INVALID_INPUT" ? 400 : error.code === "NOT_FOUND" ? 404 : error.code === "OVER_RECEIPT" ? 422 : error.code === "INVALID_STATE" ? 409 : 409;
     return NextResponse.json({ error: { code: error.code, message: error.message } }, { status });
