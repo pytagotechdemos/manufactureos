@@ -116,6 +116,21 @@ Phase 7 — Deployment & end-to-end verification (in progress)
   - Automatically runs `prisma migrate deploy` (all 20 migrations), seeds master data & access control (`prisma:seed`), provisions administrator credentials out-of-band (`admin:create`), checks 37/37 granular RBAC permissions (`rbac:check`), runs all 11 PostgreSQL integration tests, and executes Playwright end-to-end suite (`test:e2e`).
   - Added `"test:e2e": "playwright test"` and configured `"prisma": { "seed": "tsx prisma/seed.ts" }` in `package.json`.
 
+- **Discrete Manufacturing ERP Terminology Standardization & Ergonomic Overhaul (implemented)**:
+  - Standardized all UI copy to professional discrete manufacturing ERP terminology across forms, tables, modals, alerts, and CSV exports:
+    - Master Data: Item Master, Item Type (Raw Material, Component, Sub-assembly, Finished Goods, Consumable), Supply Type (BUY, MAKE), Reorder Point (ROP), Purchasing Lead Time, MOQ, Lot Size Multiple.
+    - Supply Chain: Purchase Order (PO), Purchase Request (PR), Goods Receipt (GRN), Supplier. Completely eradicated awkward literal translations ("rantai pasok", "pesanan pembelian", "permintaan pembelian", "pemasok", "penerimaan barang").
+    - Planning & MRP: Production Demand, time-phased buckets (Gross Requirements, Scheduled Receipts, Projected Available, Net Requirements), PO/MO recommendations.
+    - Manufacturing: Manufacturing Order (MO), Work Order (WO), Work Center, WIP material issuance/consumption/returns, Finished Goods receipts.
+    - Quality Control (QC): Inspections, Accepted, Rejected (Scrap), Rework.
+    - Costing & Valuation: Cost Variance Analysis (Estimated vs Actual), Moving Average Inventory Valuation, WIP Valuation.
+  - Enhanced dialog accessibility and ergonomic interactions:
+    - Keyboard `Escape` key dismiss listener on all modals.
+    - Automatic body scroll lock (`overflow: hidden`) during modal presentation with unmount cleanup.
+    - Clickable backdrop dismiss on all dialog overlays.
+    - HTML5 validity enforcement (zero `<button>` inside `<Link>` or vice versa).
+    - Standardized RFC 4180 CSV export filenames (`*-YYYY-MM-DD.csv`) and professional ERP headers across all modules.
+
 ## Not implemented / not verified
 - Custom domain and preview-deployment protection rules are not configured.
 
