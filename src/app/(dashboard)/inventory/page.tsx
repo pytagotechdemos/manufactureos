@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge, humanize } from "@/components/ui/badge";
 import { formatDateTime, formatMoney, formatQuantity, todayJakarta } from "@/lib/format";
 import { Pagination } from "@/components/ui/pagination";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { downloadCsv } from "@/lib/csv";
 import { Download } from "lucide-react";
 
@@ -67,6 +68,7 @@ const tabs: Array<{ id: Tab; label: string }> = [
 ];
 
 export default function InventoryPage() {
+  const confirm = useConfirm();
   const [tab, setTab] = useState<Tab>("balances");
   const [balances, setBalances] = useState<BalanceRow[]>([]);
   const [movements, setMovements] = useState<MovementRow[]>([]);
@@ -153,9 +155,13 @@ export default function InventoryPage() {
   }, []);
 
   async function handleReleaseReservation(id: string) {
-    if (!confirm("Apakah Anda yakin ingin melepaskan reservasi stok ini? Stok yang dicadangkan akan dikembalikan ke saldo tersedia.")) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: "Lepaskan reservasi stok?",
+      description: "Stok yang dicadangkan akan dikembalikan ke saldo tersedia dan dapat dialokasikan ke kebutuhan lain.",
+      confirmLabel: "Lepaskan reservasi",
+      tone: "primary",
+    });
+    if (!confirmed) return;
     setReleasingId(id);
     setError(null);
     try {

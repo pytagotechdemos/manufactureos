@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { ManufacturingNav } from "@/components/manufacturing/manufacturing-nav";
 import { formatDate, formatDateTime, formatQuantity, todayJakarta } from "@/lib/format";
 import { Pagination } from "@/components/ui/pagination";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { downloadCsv } from "@/lib/csv";
 import { Download } from "lucide-react";
 
@@ -52,6 +53,7 @@ type Recommendation = {
 type MrpRunDetail = MrpRun & { recommendations: Recommendation[] };
 
 export default function ManufacturingPage() {
+  const confirm = useConfirm();
   const [orders, setOrders] = useState<MoRow[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [runs, setRuns] = useState<MrpRun[]>([]);
@@ -287,9 +289,12 @@ export default function ManufacturingPage() {
   }
 
   async function handleCancelMo(order: MoRow) {
-    if (!window.confirm(`Batalkan Manufacturing Order (MO) ${order.number}? Reservasi material akan dilepas jika belum dikeluarkan.`)) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: `Batalkan Manufacturing Order ${order.number}?`,
+      description: "MO akan dibatalkan. Reservasi material dilepas jika belum dikeluarkan, dan sisa target produksi tidak dapat diproses lagi.",
+      confirmLabel: "Batalkan MO",
+    });
+    if (!confirmed) return;
     setActingId(order.id);
     setError(null);
     try {

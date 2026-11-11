@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/form";
+import { Modal } from "@/components/ui/modal";
 
 interface BomDetail {
   id: string;
@@ -67,24 +68,6 @@ export function EditBomDraftModal({ detail, onSaved }: EditBomDraftModalProps) {
     );
   }, [detail]);
 
-  useEffect(() => {
-    if (!open) return;
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") handleClose();
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const original = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = original;
-    };
-  }, [open]);
-
   function handleClose() {
     setOpen(false);
     setError(null);
@@ -141,20 +124,8 @@ export function EditBomDraftModal({ detail, onSaved }: EditBomDraftModalProps) {
         Edit Draf
       </Button>
 
-      {open ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="edit-bom-title"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
-        >
-          <div
-            aria-hidden="true"
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
-            onClick={handleClose}
-          />
-          <div className="relative z-10 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white shadow-xl my-auto">
-            <Card className="border-0 shadow-none">
+      <Modal className="max-w-2xl" label="Edit Draf BOM" onClose={handleClose} open={open}>
+        <Card className="max-h-[90vh] overflow-y-auto border-0 shadow-none">
               <CardHeader
                 title="Edit Draf BOM"
                 description={`Ubah parameter draf untuk ${detail.number} Revisi ${detail.revision}`}
@@ -244,9 +215,7 @@ export function EditBomDraftModal({ detail, onSaved }: EditBomDraftModalProps) {
                 </form>
               </CardBody>
             </Card>
-          </div>
-        </div>
-      ) : null}
+      </Modal>
     </>
   );
 }

@@ -10,6 +10,7 @@ export type SessionUser = {
   name: string;
   email: string;
   roleNames: string[];
+  permissions: string[];
 };
 
 function initials(name: string) {
@@ -25,6 +26,14 @@ function initials(name: string) {
 
 export function SidebarContent({ user, onNavigate }: { user: SessionUser; onNavigate?: () => void }) {
   const pathname = usePathname();
+  const visibleGroups = navGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter(
+        (item) => !item.permissions || item.permissions.some((permission) => user.permissions.includes(permission)),
+      ),
+    }))
+    .filter((group) => group.items.length > 0);
 
   async function handleSignOut() {
     await authClient.signOut();
@@ -44,7 +53,7 @@ export function SidebarContent({ user, onNavigate }: { user: SessionUser; onNavi
       </div>
 
       <nav aria-label="Navigasi utama" className="scroll-area flex-1 overflow-y-auto px-2.5 py-3">
-        {navGroups.map((group) => (
+        {visibleGroups.map((group) => (
           <div className="mb-4 last:mb-0" key={group.label ?? "root"}>
             {group.label ? (
               <p className="px-2.5 pb-1.5 text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
@@ -59,7 +68,7 @@ export function SidebarContent({ user, onNavigate }: { user: SessionUser; onNavi
                   <li key={item.href}>
                     <Link
                       aria-current={active ? "page" : undefined}
-                      className={`group relative flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] transition-colors ${
+                      className={`group relative flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-inset ${
                         active
                           ? "bg-brand-50 font-medium text-brand-700"
                           : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
@@ -94,7 +103,7 @@ export function SidebarContent({ user, onNavigate }: { user: SessionUser; onNavi
           </span>
           <button
             aria-label="Keluar"
-            className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+            className="flex size-9 shrink-0 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:outline-none"
             onClick={handleSignOut}
             title="Keluar"
             type="button"

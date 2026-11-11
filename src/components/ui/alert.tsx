@@ -32,7 +32,12 @@ export function Alert({ tone = "info", title, children, onClose }: { tone?: Tone
         <div className={title ? "mt-0.5" : ""}>{children}</div>
       </div>
       {onClose ? (
-        <button aria-label="Tutup notifikasi" className="shrink-0 rounded p-0.5 opacity-60 hover:opacity-100" onClick={onClose} type="button">
+        <button
+          aria-label="Tutup notifikasi"
+          className="-m-1 flex size-8 shrink-0 items-center justify-center rounded-md opacity-70 transition hover:bg-black/5 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-current focus-visible:outline-none"
+          onClick={onClose}
+          type="button"
+        >
           <svg aria-hidden className="size-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
             <path d="M18 6 6 18M6 6l12 12" strokeLinecap="round" />
           </svg>

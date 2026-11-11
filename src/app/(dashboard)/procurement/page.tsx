@@ -13,6 +13,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatDateTime, formatMoney, formatQuantity, todayJakarta } from "@/lib/format";
 import { ArrowRight, CheckCircle2, ChevronDown, ChevronRight, Download, FileText, ShoppingBag, Truck, X } from "lucide-react";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Pagination } from "@/components/ui/pagination";
 import { downloadCsv } from "@/lib/csv";
 
@@ -95,6 +96,7 @@ type AllocatedPrInfo = {
 };
 
 export default function ProcurementPage() {
+  const confirm = useConfirm();
   const [activeTab, setActiveTab] = useState<"orders" | "requests" | "receipts">("orders");
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [purchaseRequests, setPurchaseRequests] = useState<PurchaseRequest[]>([]);
@@ -199,11 +201,11 @@ export default function ProcurementPage() {
         fetch("/api/v1/uoms"),
         fetch("/api/v1/purchase-order-lines?limit=100"),
       ]);
-      if (!poRes.ok || !grRes.ok || !supRes.ok || !whRes.ok || !itemRes.ok || !uomRes.ok || !lineRes.ok) {
+      if (!poRes.ok || !prRes.ok || !grRes.ok || !supRes.ok || !whRes.ok || !itemRes.ok || !uomRes.ok || !lineRes.ok) {
         throw new Error("Gagal memuat data pembelian");
       }
-      const [poJson, grJson, supJson, whJson, itemJson, uomJson, lineJson] = await Promise.all([
-        poRes.json(), grRes.json(), supRes.json(), whRes.json(), itemRes.json(), uomRes.json(), lineRes.json(),
+      const [poJson, prJson, grJson, supJson, whJson, itemJson, uomJson, lineJson] = await Promise.all([
+        poRes.json(), prRes.json(), grRes.json(), supRes.json(), whRes.json(), itemRes.json(), uomRes.json(), lineRes.json(),
       ]);
 
       const allOrders = [...(poJson.data ?? [])];
@@ -217,20 +219,17 @@ export default function ProcurementPage() {
         allOrders.push(...pages.flatMap((page) => page.data ?? []));
       }
 
-      if (prRes.ok) {
-        const prJson = await prRes.json();
-        const allRequests = [...(prJson.data ?? [])];
-        const requestOffsets = Array.from({ length: Math.max(0, Math.ceil(Number(prJson.page?.total ?? allRequests.length) / 100) - 1) }, (_, index) => (index + 1) * 100);
-        for (let index = 0; index < requestOffsets.length; index += 10) {
-          const pages = await Promise.all(requestOffsets.slice(index, index + 10).map(async (offset) => {
-            const response = await fetch(`/api/v1/procurement/purchase-requests?limit=100&offset=${offset}`);
-            if (!response.ok) return { data: [] };
-            return response.json();
-          }));
-          allRequests.push(...pages.flatMap((page) => page.data ?? []));
-        }
-        setPurchaseRequests(allRequests);
+      const allRequests = [...(prJson.data ?? [])];
+      const requestOffsets = Array.from({ length: Math.max(0, Math.ceil(Number(prJson.page?.total ?? allRequests.length) / 100) - 1) }, (_, index) => (index + 1) * 100);
+      for (let index = 0; index < requestOffsets.length; index += 10) {
+        const pages = await Promise.all(requestOffsets.slice(index, index + 10).map(async (offset) => {
+          const response = await fetch(`/api/v1/procurement/purchase-requests?limit=100&offset=${offset}`);
+          if (!response.ok) throw new Error("Gagal memuat seluruh Purchase Request (PR)");
+          return response.json();
+        }));
+        allRequests.push(...pages.flatMap((page) => page.data ?? []));
       }
+      setPurchaseRequests(allRequests);
 
       const allReceipts = [...(grJson.data ?? [])];
       const receiptOffsets = Array.from({ length: Math.max(0, Math.ceil(Number(grJson.page?.total ?? allReceipts.length) / 100) - 1) }, (_, index) => (index + 1) * 100);
@@ -672,7 +671,12 @@ export default function ProcurementPage() {
   }
 
   async function handleCancelPO(order: PurchaseOrder) {
-    if (!window.confirm(`Batalkan Purchase Order ${order.number}? Alokasi dari PR akan dikembalikan.`)) return;
+    const confirmed = await confirm({
+      title: `Batalkan Purchase Order ${order.number}?`,
+      description: "PO akan dibatalkan dan alokasi dari Purchase Request dikembalikan. Gunakan Tutup PO jika barang sudah diterima sebagian dan sisa pesanan tidak akan dipenuhi.",
+      confirmLabel: "Batalkan PO",
+    });
+    if (!confirmed) return;
     setActingId(order.id);
     setError(null);
     try {
@@ -689,7 +693,13 @@ export default function ProcurementPage() {
   }
 
   async function handleClosePO(order: PurchaseOrder) {
-    if (!window.confirm(`Tutup Purchase Order ${order.number}? Goods Receipt tidak dapat diproses lagi untuk PO ini.`)) return;
+    const confirmed = await confirm({
+      title: `Tutup Purchase Order ${order.number}?`,
+      description: "PO akan ditutup dan Goods Receipt baru tidak dapat diproses lagi untuk PO ini. Pastikan seluruh penerimaan yang masih berjalan sudah selesai.",
+      confirmLabel: "Tutup PO",
+      tone: "primary",
+    });
+    if (!confirmed) return;
     setActingId(order.id);
     setError(null);
     try {
@@ -706,7 +716,12 @@ export default function ProcurementPage() {
   }
 
   async function handleCancelPR(req: PurchaseRequest) {
-    if (!window.confirm(`Batalkan Purchase Request ${req.number}?`)) return;
+    const confirmed = await confirm({
+      title: `Batalkan Purchase Request ${req.number}?`,
+      description: "PR akan dibatalkan dan tidak dapat dikonversi menjadi PO. Alokasi yang belum terpakai akan dilepas.",
+      confirmLabel: "Batalkan PR",
+    });
+    if (!confirmed) return;
     setActingId(req.id);
     setError(null);
     try {
@@ -723,7 +738,12 @@ export default function ProcurementPage() {
   }
 
   async function handleCancelReceipt(receipt: GoodsReceipt) {
-    if (!window.confirm(`Batalkan draf Goods Receipt ${receipt.number}?`)) return;
+    const confirmed = await confirm({
+      title: `Batalkan draf Goods Receipt ${receipt.number}?`,
+      description: "Draf penerimaan akan dibatalkan sebelum posting. Stok belum berubah karena GRN ini belum diposting.",
+      confirmLabel: "Batalkan draf",
+    });
+    if (!confirmed) return;
     setActingId(receipt.id);
     setError(null);
     try {

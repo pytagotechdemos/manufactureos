@@ -8,6 +8,7 @@ import { Alert } from "@/components/ui/alert";
 import { Badge, type Tone, StatusBadge, humanize } from "@/components/ui/badge";
 import { Table, TableBody, TableHead, Td, Th, Tr } from "@/components/ui/table";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Modal } from "@/components/ui/modal";
 import { formatDateTime, formatMoney, formatQuantity, todayJakarta } from "@/lib/format";
 import { downloadCsv } from "@/lib/csv";
 
@@ -140,22 +141,6 @@ export function ItemLifecycleModal({
     };
   }, [itemId]);
 
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
-
-  useEffect(() => {
-    const original = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = original;
-    };
-  }, []);
-
   function exportAuditCsv() {
     if (!data) return;
     downloadCsv(
@@ -185,18 +170,8 @@ export function ItemLifecycleModal({
   }
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="item-lifecycle-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
-    >
-      <div
-        aria-hidden="true"
-        className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
-        onClick={onClose}
-      />
-      <div className="relative z-10 flex flex-col w-full max-w-4xl max-h-[90vh] bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden my-auto">
+    <Modal className="max-w-4xl" label="Siklus Hidup & Audit Log Item" onClose={onClose} open>
+      <div className="relative z-10 flex max-h-[90vh] w-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl">
         {/* Header */}
         <div className="flex items-start justify-between p-5 border-b border-slate-200 bg-slate-50/75">
           <div className="space-y-1">
@@ -521,6 +496,6 @@ export function ItemLifecycleModal({
           </Button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

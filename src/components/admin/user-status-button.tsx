@@ -1,8 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { StatusToggleButton } from "@/components/admin/status-toggle-button";
 
 export function UserStatusButton({
   userId,
@@ -13,44 +11,14 @@ export function UserStatusButton({
   currentStatus: string;
   isSelf: boolean;
 }) {
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-
-  const nextStatus = currentStatus === "ACTIVE" ? "DISABLED" : "ACTIVE";
-  const label = currentStatus === "ACTIVE" ? "Nonaktifkan" : "Aktifkan";
-
-  async function handleToggle() {
-    if (isSelf) return;
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/v1/users/${userId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: nextStatus }),
-      });
-      const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error?.message ?? "Gagal mengubah status pengguna");
-      router.refresh();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Gagal mengubah status pengguna");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  if (isSelf) {
-    return <span className="text-[12px] text-slate-400">Akun Anda</span>;
-  }
-
   return (
-    <Button
-      size="sm"
-      variant={currentStatus === "ACTIVE" ? "secondary" : "primary"}
-      loading={loading}
-      onClick={handleToggle}
-      className={currentStatus === "ACTIVE" ? "text-red-700 hover:bg-red-50 hover:text-red-800" : undefined}
-    >
-      {label}
-    </Button>
+    <StatusToggleButton
+      currentStatus={currentStatus}
+      disabled={isSelf}
+      disabledLabel="Akun Anda"
+      endpoint={`/api/v1/users/${userId}`}
+      entityLabel="pengguna"
+      inactiveStatus="DISABLED"
+    />
   );
 }

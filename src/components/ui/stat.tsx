@@ -39,7 +39,7 @@ export function Stat({
     return (
       <Link
         href={href}
-        className="group block rounded-lg border border-slate-200 bg-white p-4 shadow-xs transition hover:border-brand-500 hover:shadow-sm"
+        className="group block rounded-lg border border-slate-200 bg-white p-4 shadow-xs transition outline-none hover:border-brand-500 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2"
       >
         {content}
       </Link>

@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/form";
+import { Modal } from "@/components/ui/modal";
 
 export function CreateWorkCenterModal({
   onCreated,
@@ -26,24 +27,6 @@ export function CreateWorkCenterModal({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") handleClose();
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const original = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = original;
-    };
-  }, [open]);
 
   function handleClose() {
     setOpen(false);
@@ -101,20 +84,13 @@ export function CreateWorkCenterModal({
         {buttonLabel}
       </Button>
 
-      {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div
-            aria-hidden="true"
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
-            onClick={handleClose}
-          />
-          <div className="relative z-10 w-full max-w-lg my-auto">
-            <Card className="shadow-2xl max-h-[90vh] flex flex-col">
-              <CardHeader
+      <Modal className="max-w-lg" label="Tambah Work Center Baru" onClose={handleClose} open={open}>
+        <Card className="flex max-h-[90vh] flex-col shadow-2xl">
+          <CardHeader
                 actions={
                   <button
                     aria-label="Tutup form"
-                    className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                    className="flex size-9 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:outline-none"
                     onClick={handleClose}
                     type="button"
                   >
@@ -158,7 +134,7 @@ export function CreateWorkCenterModal({
                     />
                   </Field>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <Field hint="Tarif per jam (Rp) untuk alokasi biaya tenaga kerja/overhead" label="Tarif / Jam (IDR)">
                       <Input
                         min="0"
@@ -191,11 +167,9 @@ export function CreateWorkCenterModal({
                     </Button>
                   </div>
                 </form>
-              </CardBody>
-            </Card>
-          </div>
-        </div>
-      ) : null}
+            </CardBody>
+          </Card>
+      </Modal>
     </>
   );
 }

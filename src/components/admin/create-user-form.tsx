@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/form";
+import { Modal } from "@/components/ui/modal";
 
 type Role = { id: string; code: string; name: string; permissions: { permission: { code: string } }[] };
 
@@ -32,24 +33,6 @@ export function CreateUserForm() {
       })
       .catch(() => setLoadingRoles(false));
   }, []);
-
-  useEffect(() => {
-    if (!open) return;
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") handleClose();
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const original = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = original;
-    };
-  }, [open]);
 
   function handleClose() {
     setOpen(false);
@@ -96,20 +79,13 @@ export function CreateUserForm() {
         Tambah pengguna
       </Button>
 
-      {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div
-            aria-hidden="true"
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
-            onClick={handleClose}
-          />
-          <div className="relative z-10 w-full max-w-lg my-auto">
-            <Card className="shadow-2xl max-h-[90vh] flex flex-col">
-              <CardHeader
+      <Modal className="max-w-lg" label="Tambah Pengguna" onClose={handleClose} open={open}>
+        <Card className="flex max-h-[90vh] flex-col shadow-2xl">
+          <CardHeader
                 actions={
                   <button
                     aria-label="Tutup form"
-                    className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                    className="flex size-9 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:outline-none"
                     onClick={handleClose}
                     type="button"
                   >
@@ -147,6 +123,7 @@ export function CreateUserForm() {
                   <Field htmlFor="create-user-password" hint="Minimal 12 karakter" label="Kata sandi" required>
                     <Input
                       id="create-user-password"
+                      minLength={12}
                       name="password"
                       onChange={(e) => setPassword(e.target.value)}
                       required
@@ -174,11 +151,9 @@ export function CreateUserForm() {
                     </Button>
                   </div>
                 </form>
-              </CardBody>
-            </Card>
-          </div>
-        </div>
-      ) : null}
+            </CardBody>
+          </Card>
+      </Modal>
     </>
   );
 }

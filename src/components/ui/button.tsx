@@ -1,5 +1,6 @@
 import { forwardRef } from "react";
-import type { ButtonHTMLAttributes } from "react";
+import type { AnchorHTMLAttributes, ButtonHTMLAttributes } from "react";
+import Link from "next/link";
 import { Loader2 } from "lucide-react";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
@@ -26,6 +27,9 @@ const sizeClasses: Record<Size, string> = {
   md: "h-9 px-3.5 text-sm gap-2",
 };
 
+const baseClasses =
+  "inline-flex shrink-0 items-center justify-center rounded-md font-medium transition-colors outline-none cursor-pointer focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-60";
+
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   { variant = "secondary", size = "md", loading = false, disabled, className = "", children, type = "button", ...props },
   ref,
@@ -35,7 +39,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       ref={ref}
       type={type}
       disabled={disabled || loading}
-      className={`inline-flex shrink-0 items-center justify-center rounded-md font-medium transition-colors outline-none cursor-pointer focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-60 ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
       {...props}
     >
       {loading ? <Loader2 aria-hidden className="size-4 animate-spin" /> : null}
@@ -43,3 +47,14 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     </button>
   );
 });
+
+export interface ButtonLinkProps extends AnchorHTMLAttributes<HTMLAnchorElement> {
+  href: string;
+  variant?: Variant;
+  size?: Size;
+}
+
+/** A navigation link that matches the button visual language exactly. */
+export function ButtonLink({ variant = "secondary", size = "md", className = "", ...props }: ButtonLinkProps) {
+  return <Link className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`} {...props} />;
+}

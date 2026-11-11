@@ -3,11 +3,12 @@ import Link from "next/link";
 import { requireCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/page-header";
+import { ButtonLink } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Stat, StatGrid } from "@/components/ui/stat";
 import { Table, TableBody, TableHead, Td, Th, Tr } from "@/components/ui/table";
 import { EmptyState } from "@/components/ui/empty-state";
-import { StatusBadge } from "@/components/ui/badge";
+import { StatusBadge, humanize } from "@/components/ui/badge";
 import { formatQuantity } from "@/lib/format";
 
 export const metadata: Metadata = {
@@ -15,11 +16,11 @@ export const metadata: Metadata = {
 };
 
 const itemTypeLabels: Record<string, string> = {
-  RAW_MATERIAL: "Raw Material",
-  PURCHASED_COMPONENT: "Component",
-  SUB_ASSEMBLY: "Sub-assembly",
-  FINISHED_GOODS: "Finished Goods",
-  CONSUMABLE: "Consumable",
+  RAW_MATERIAL: "Bahan Baku",
+  PURCHASED_COMPONENT: "Komponen Beli",
+  SUB_ASSEMBLY: "Sub-rakitan",
+  FINISHED_GOODS: "Barang Jadi",
+  CONSUMABLE: "Bahan Habis Pakai",
 };
 
 export default async function OverviewPage() {
@@ -59,18 +60,12 @@ export default async function OverviewPage() {
         description={`Selamat datang kembali, ${user.name}. Pantau status terkini produksi, inventory, dan supply chain.`}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Link
-              href="/planning"
-              className="inline-flex h-9 items-center justify-center rounded-md border border-slate-300 bg-white px-3.5 text-sm font-medium text-slate-700 shadow-xs transition-colors hover:bg-slate-50 hover:text-slate-900"
-            >
+            <ButtonLink href="/planning" variant="secondary">
               Kalkulasi MRP
-            </Link>
-            <Link
-              href="/manufacturing"
-              className="inline-flex h-9 items-center justify-center rounded-md bg-brand-600 px-3.5 text-sm font-medium text-white shadow-xs transition-colors hover:bg-brand-700"
-            >
+            </ButtonLink>
+            <ButtonLink href="/manufacturing" variant="primary">
               Manufacturing Orders
-            </Link>
+            </ButtonLink>
           </div>
         }
       />
@@ -203,7 +198,7 @@ export default async function OverviewPage() {
                         </Link>
                         <div className="text-slate-500 truncate max-w-[180px] text-[11px]">{item.name}</div>
                       </Td>
-                      <Td className="text-slate-600 text-xs whitespace-nowrap">{itemTypeLabels[item.itemType] ?? item.itemType.replace(/_/g, " ")}</Td>
+                      <Td className="text-slate-600 text-xs whitespace-nowrap">{itemTypeLabels[item.itemType] ?? humanize(item.itemType)}</Td>
                       <Td align="right" className="font-mono text-slate-600 text-xs whitespace-nowrap">
                         {item.baseUom?.code ?? "—"}
                       </Td>

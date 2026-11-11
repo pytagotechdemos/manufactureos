@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/form";
+import { Modal } from "@/components/ui/modal";
 
 export function CreateCategoryModal({
   onCreated,
@@ -24,24 +25,6 @@ export function CreateCategoryModal({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") handleClose();
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const original = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = original;
-    };
-  }, [open]);
 
   function handleClose() {
     setOpen(false);
@@ -95,77 +78,68 @@ export function CreateCategoryModal({
         {buttonLabel}
       </Button>
 
-      {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div
-            aria-hidden="true"
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
-            onClick={handleClose}
+      <Modal label="Tambah Kategori Baru" onClose={handleClose} open={open}>
+        <Card className="flex max-h-[90vh] flex-col shadow-2xl">
+          <CardHeader
+            actions={
+              <button
+                aria-label="Tutup form"
+                className="flex size-9 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:outline-none"
+                onClick={handleClose}
+                type="button"
+              >
+                <X aria-hidden className="size-4" />
+              </button>
+            }
+            description="Kategori digunakan untuk klasifikasi master item dan struktur taksonomi produk."
+            title="Tambah Kategori Baru"
           />
-          <div className="relative z-10 w-full max-w-md my-auto">
-            <Card className="shadow-2xl max-h-[90vh] flex flex-col">
-              <CardHeader
-                actions={
-                  <button
-                    aria-label="Tutup form"
-                    className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                    onClick={handleClose}
-                    type="button"
-                  >
-                    <X aria-hidden className="size-4" />
-                  </button>
-                }
-                description="Kategori digunakan untuk klasifikasi master item dan struktur taksonomi produk."
-                title="Tambah Kategori Baru"
-              />
-              <CardBody className="space-y-4 overflow-y-auto">
-                {error ? (
-                  <Alert onClose={() => setError(null)} tone="danger">
-                    {error}
-                  </Alert>
-                ) : null}
-                {notice ? (
-                  <Alert onClose={() => setNotice(null)} tone="success">
-                    {notice}
-                  </Alert>
-                ) : null}
+          <CardBody className="space-y-4 overflow-y-auto">
+            {error ? (
+              <Alert onClose={() => setError(null)} tone="danger">
+                {error}
+              </Alert>
+            ) : null}
+            {notice ? (
+              <Alert onClose={() => setNotice(null)} tone="success">
+                {notice}
+              </Alert>
+            ) : null}
 
-                <form className="space-y-4" onSubmit={handleSubmit}>
-                  <Field hint="Kode singkat kapital, mis: RAW, PKG, ELEC, ASM" label="Kode Kategori" required>
-                    <Input
-                      autoFocus
-                      maxLength={20}
-                      onChange={(e) => setCode(e.target.value.toUpperCase())}
-                      placeholder="contoh: PKG"
-                      required
-                      value={code}
-                    />
-                  </Field>
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              <Field hint="Kode singkat kapital, mis: RAW, PKG, ELEC, ASM" label="Kode Kategori" required>
+                <Input
+                  autoFocus
+                  maxLength={20}
+                  onChange={(e) => setCode(e.target.value.toUpperCase())}
+                  placeholder="contoh: PKG"
+                  required
+                  value={code}
+                />
+              </Field>
 
-                  <Field hint="Nama kategori deskriptif" label="Nama Kategori" required>
-                    <Input
-                      maxLength={80}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="contoh: Packaging Materials"
-                      required
-                      value={name}
-                    />
-                  </Field>
+              <Field hint="Nama kategori deskriptif" label="Nama Kategori" required>
+                <Input
+                  maxLength={80}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="contoh: Packaging Materials"
+                  required
+                  value={name}
+                />
+              </Field>
 
-                  <div className="flex justify-end gap-2 pt-2">
-                    <Button onClick={handleClose} type="button" variant="secondary">
-                      Batal
-                    </Button>
-                    <Button loading={submitting} type="submit" variant="primary">
-                      Simpan Kategori
-                    </Button>
-                  </div>
-                </form>
-              </CardBody>
-            </Card>
-          </div>
-        </div>
-      ) : null}
+              <div className="flex justify-end gap-2 pt-2">
+                <Button onClick={handleClose} type="button" variant="secondary">
+                  Batal
+                </Button>
+                <Button loading={submitting} type="submit" variant="primary">
+                  Simpan Kategori
+                </Button>
+              </div>
+            </form>
+          </CardBody>
+        </Card>
+      </Modal>
     </>
   );
 }

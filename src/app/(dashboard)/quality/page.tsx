@@ -12,6 +12,7 @@ import { Field, Input, SearchInput, Select } from "@/components/ui/form";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { downloadCsv } from "@/lib/csv";
 import { formatDateTime, formatQuantity, todayJakarta } from "@/lib/format";
 
@@ -42,6 +43,7 @@ type Inspection = {
 };
 
 export default function QualityPage() {
+  const confirm = useConfirm();
   const [pendingOrders, setPendingOrders] = useState<PendingOrder[]>([]);
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const [loading, setLoading] = useState(true);
@@ -382,7 +384,12 @@ export default function QualityPage() {
   }
 
   async function handleDeleteInspection(inspection: Inspection) {
-    if (!window.confirm(`Hapus draf pemeriksaan ${inspection.number}?`)) return;
+    const confirmed = await confirm({
+      title: `Hapus draf pemeriksaan ${inspection.number}?`,
+      description: "Draf pemeriksaan akan dihapus permanen. Data hasil inspeksi yang sudah diposting tidak terpengaruh.",
+      confirmLabel: "Hapus draf",
+    });
+    if (!confirmed) return;
     setError(null);
     setSubmitting(true);
     try {

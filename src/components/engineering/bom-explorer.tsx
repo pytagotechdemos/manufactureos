@@ -12,6 +12,7 @@ import { Input, SearchInput, Select } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { Pagination } from "@/components/ui/pagination";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { downloadCsv } from "@/lib/csv";
 import { EditBomDraftModal } from "./edit-bom-draft-modal";
 import { CloneBomModal } from "./clone-bom-modal";
@@ -58,6 +59,7 @@ async function readJson<T>(response: Response): Promise<T> {
 }
 
 export function BomExplorer({ canApprove, canCreate }: { canApprove: boolean; canCreate: boolean }) {
+  const confirm = useConfirm();
   const [boms, setBoms] = useState<BomSummary[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<BomDetail | null>(null);
@@ -252,7 +254,13 @@ export function BomExplorer({ canApprove, canCreate }: { canApprove: boolean; ca
   }
 
   async function handleDeleteDraft() {
-    if (!selectedId || !window.confirm("Apakah Anda yakin ingin menghapus draf BOM ini?")) return;
+    if (!selectedId) return;
+    const confirmed = await confirm({
+      title: "Hapus draf BOM?",
+      description: "Draf BOM dan seluruh baris komponennya akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.",
+      confirmLabel: "Hapus draf",
+    });
+    if (!confirmed) return;
     setActionLoading(true);
     setError(null);
     setNotice(null);
@@ -267,6 +275,25 @@ export function BomExplorer({ canApprove, canCreate }: { canApprove: boolean; ca
     } finally {
       setActionLoading(false);
     }
+  }
+
+  async function handleRejectToDraft() {
+    const confirmed = await confirm({
+      title: "Kembalikan BOM ke draf?",
+      description: "BOM akan keluar dari proses persetujuan dan dapat diedit kembali. Perubahan yang belum disetujui tidak diposting ke produksi.",
+      confirmLabel: "Kembalikan ke draf",
+      tone: "primary",
+    });
+    if (confirmed) await performAction("reject");
+  }
+
+  async function handleObsolete() {
+    const confirmed = await confirm({
+      title: "Nyatakan BOM usang?",
+      description: "BOM yang sudah usang tidak dapat digunakan untuk perencanaan atau produksi baru. Pastikan tidak ada Manufacturing Order aktif yang masih memakainya.",
+      confirmLabel: "Nyatakan usang",
+    });
+    if (confirmed) await performAction("obsolete");
   }
 
   const selectedStatus = detail?.status;
@@ -505,11 +532,7 @@ export function BomExplorer({ canApprove, canCreate }: { canApprove: boolean; ca
                       size="sm"
                       disabled={!canApproveAction || actionLoading}
                       loading={actionLoading && canApproveAction}
-                      onClick={() => {
-                        if (window.confirm("Kembalikan BOM ini ke status draf untuk perbaikan?")) {
-                          void performAction("reject");
-                        }
-                      }}
+                      onClick={() => void handleRejectToDraft()}
                     >
                       Tolak ke draf
                     </Button>
@@ -520,7 +543,7 @@ export function BomExplorer({ canApprove, canCreate }: { canApprove: boolean; ca
                       size="sm"
                       disabled={!canObsolete || actionLoading}
                       loading={actionLoading && canObsolete}
-                      onClick={() => void performAction("obsolete")}
+                      onClick={() => void handleObsolete()}
                     >
                       Kedaluwarsa
                     </Button>

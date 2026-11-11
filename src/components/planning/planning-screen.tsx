@@ -13,6 +13,7 @@ import { Field, Input, SearchInput, Select } from "@/components/ui/form";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { formatDate, formatQuantity, todayJakarta } from "@/lib/format";
 import { downloadCsv } from "@/lib/csv";
 
@@ -102,6 +103,7 @@ async function readJson<T>(response: Response): Promise<T> {
 }
 
 export function PlanningScreen({ permissions }: { permissions: Permissions }) {
+  const confirm = useConfirm();
   const [items, setItems] = useState<Item[]>([]);
   const [demands, setDemands] = useState<Demand[]>([]);
   const [runs, setRuns] = useState<MrpRunSummary[]>([]);
@@ -373,7 +375,12 @@ export function PlanningScreen({ permissions }: { permissions: Permissions }) {
   }
 
   async function cancelDemand(id: string, number: string) {
-    if (!window.confirm(`Batalkan Production Demand ${number}?`)) return;
+    const confirmed = await confirm({
+      title: `Batalkan Production Demand ${number}?`,
+      description: "Demand yang dibatalkan tidak lagi menjadi input perencanaan MRP. Tindakan ini tidak dapat dibatalkan.",
+      confirmLabel: "Batalkan demand",
+    });
+    if (!confirmed) return;
     setReleasingId(id);
     setError(null);
     setNotice(null);

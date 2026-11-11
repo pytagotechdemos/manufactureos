@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Copy, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/form";
+import { Modal } from "@/components/ui/modal";
 
 function suggestNextRevision(currentRev: string): string {
   const trimmed = currentRev.trim().toUpperCase();
@@ -50,24 +51,6 @@ export function CloneBomModal({
   const [effectiveDate, setEffectiveDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") handleClose();
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const original = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = original;
-    };
-  }, [open]);
 
   function handleOpen() {
     const rev = suggestNextRevision(sourceBom.revision);
@@ -120,20 +103,13 @@ export function CloneBomModal({
         Buat Revisi Baru
       </Button>
 
-      {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div
-            aria-hidden="true"
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
-            onClick={handleClose}
-          />
-          <div className="relative z-10 w-full max-w-lg my-auto">
-            <Card className="shadow-2xl max-h-[90vh] flex flex-col">
-              <CardHeader
+      <Modal className="max-w-lg" label="Buat Revisi Baru dari BOM" onClose={handleClose} open={open}>
+        <Card className="flex max-h-[90vh] flex-col shadow-2xl">
+          <CardHeader
                 actions={
                   <button
                     aria-label="Tutup form"
-                    className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                    className="flex size-9 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:outline-none"
                     onClick={handleClose}
                     type="button"
                   >
@@ -158,7 +134,7 @@ export function CloneBomModal({
                 </div>
 
                 <form className="space-y-3" onSubmit={handleSubmit}>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <Field htmlFor="clone-bom-num" label="Nomor BOM baru" required>
                       <Input
                         id="clone-bom-num"
@@ -206,11 +182,9 @@ export function CloneBomModal({
                     </Button>
                   </div>
                 </form>
-              </CardBody>
-            </Card>
-          </div>
-        </div>
-      ) : null}
+            </CardBody>
+          </Card>
+      </Modal>
     </>
   );
 }

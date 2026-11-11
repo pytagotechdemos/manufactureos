@@ -2,11 +2,38 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { type Permission } from "@/lib/permissions";
 
+/** All permission codes granted to an active user. Used to shape navigation. */
+export async function getUserPermissions(userId: string): Promise<string[]> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      status: true,
+      userRoles: {
+        select: {
+          role: {
+            select: {
+              permissions: { select: { permission: { select: { code: true } } } },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!user || user.status !== "ACTIVE") return [];
+  return [
+    ...new Set(
+      user.userRoles.flatMap((userRole) =>
+        userRole.role.permissions.map(({ permission }) => permission.code),
+      ),
+    ),
+  ];
+}
+
 export async function userHasPermission(
   userId: string,
   permission: Permission,
-) {
-  const user = await prisma.user.findUnique({
+) {  const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
       status: true,

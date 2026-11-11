@@ -1,7 +1,10 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
+import { getUserPermissions } from "@/lib/authorize";
 import { AppShell } from "@/components/layout/app-shell";
+import { ConfirmProvider } from "@/components/ui/confirm-dialog";
+import { ToastProvider } from "@/components/ui/toast";
 
 export default async function ProtectedLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const user = await getCurrentUser();
@@ -14,6 +17,7 @@ export default async function ProtectedLayout({ children }: Readonly<{ children:
     where: { userId: user.id },
     select: { role: { select: { name: true } } },
   });
+  const permissions = await getUserPermissions(user.id);
 
   return (
     <AppShell
@@ -21,9 +25,12 @@ export default async function ProtectedLayout({ children }: Readonly<{ children:
         name: user.name,
         email: user.email,
         roleNames: roleLinks.map(({ role }) => role.name),
+        permissions,
       }}
     >
-      {children}
+      <ToastProvider>
+        <ConfirmProvider>{children}</ConfirmProvider>
+      </ToastProvider>
     </AppShell>
   );
 }

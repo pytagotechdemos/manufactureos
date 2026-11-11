@@ -14,6 +14,7 @@ import { Download, Edit, History, Plus } from "lucide-react";
 import { CreateCategoryModal } from "@/components/admin/create-category-modal";
 import { ItemLifecycleModal } from "@/components/master-data/item-lifecycle-modal";
 import { Pagination } from "@/components/ui/pagination";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { downloadCsv } from "@/lib/csv";
 
 interface ItemRow {
@@ -72,19 +73,20 @@ function StatCard({ label, value, hint }: { label: string; value: number; hint: 
 }
 
 const itemTypeLabels: Record<string, string> = {
-  RAW_MATERIAL: "Raw Material",
-  PURCHASED_COMPONENT: "Component",
-  SUB_ASSEMBLY: "Sub-assembly",
-  FINISHED_GOODS: "Finished Goods",
-  CONSUMABLE: "Consumable",
+  RAW_MATERIAL: "Bahan Baku",
+  PURCHASED_COMPONENT: "Komponen Beli",
+  SUB_ASSEMBLY: "Sub-rakitan",
+  FINISHED_GOODS: "Barang Jadi",
+  CONSUMABLE: "Bahan Habis Pakai",
 };
 
 const supplyTypeLabels: Record<string, string> = {
-  BUY: "BUY (Beli)",
-  MAKE: "MAKE (Produksi)",
+  BUY: "Beli",
+  MAKE: "Buat",
 };
 
 export default function ItemsPage() {
+  const confirm = useConfirm();
   const [activeTab, setActiveTab] = useState<"items" | "conversions">("items");
   const [items, setItems] = useState<ItemRow[]>([]);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
@@ -403,7 +405,12 @@ export default function ItemsPage() {
   }
 
   async function handleDeleteConversion(id: string) {
-    if (!window.confirm("Apakah Anda yakin ingin menghapus konversi satuan ini?")) return;
+    const confirmed = await confirm({
+      title: "Hapus konversi satuan?",
+      description: "Konversi ini akan dihapus permanen dan tidak dapat digunakan lagi pada transaksi baru.",
+      confirmLabel: "Hapus konversi",
+    });
+    if (!confirmed) return;
     setSaving(true);
     setError(null);
     try {

@@ -1,8 +1,22 @@
 import type { ReactNode, TdHTMLAttributes, ThHTMLAttributes } from "react";
 
-export function Table({ children, className = "" }: { children: ReactNode; className?: string }) {
+export function Table({
+  children,
+  className = "",
+  label,
+}: {
+  children: ReactNode;
+  className?: string;
+  /** Accessible name for the scrollable table region. */
+  label?: string;
+}) {
   return (
-    <div className="scroll-area overflow-x-auto">
+    <div
+      aria-label={label}
+      className="scroll-area overflow-x-auto rounded-sm focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-inset focus-visible:outline-none"
+      role={label ? "region" : undefined}
+      tabIndex={0}
+    >
       <table className={`w-full caption-bottom border-collapse text-sm ${className}`}>{children}</table>
     </div>
   );
